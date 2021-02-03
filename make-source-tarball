@@ -1,0 +1,34 @@
+#!/bin/bash
+
+newgit="eval"
+if [[ "`lsb_release -rs`" =~ ^7\. ]]; then
+    newgit="scl enable rh-git218"
+fi
+
+BASE=vault-rpm
+set -ex
+cd "`dirname $0`"
+for OLDBASE in $BASE-*; do
+    if [ -d $OLDBASE/gopath ]; then
+        GOPATH=$PWD/$OLDBASE/gopath go clean -modcache
+    fi
+done
+rm -rf $BASE-*
+VERSION="`sed -n 's/^Version: //p' vault.spec`"
+BASE="$BASE-$VERSION"
+mkdir $BASE
+cd $BASE
+mkdir gopath
+export GOPATH=$PWD/gopath
+curl -s https://codeload.github.com/hashicorp/vault/tar.gz/v$VERSION | tar xzf -
+cd vault-$VERSION
+$newgit "make bootstrap"
+# MAKE=: prevents it from doing make fmt which does goimports which fails
+$newgit "make static-assets MAKE=:"
+cd ..
+cd ..
+
+rm -rf $GOPATH/pkg/mod/cache
+tar czf $BASE.tar.gz $BASE
+go clean -modcache
+rm -rf $BASE
