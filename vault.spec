@@ -9,6 +9,7 @@ License: MPL
 Source0: %{name}-rpm-%{version}.tar.gz
 Source1: https://raw.githubusercontent.com/opensciencegrid/%{name}-rpm/master/%{name}.hcl
 Source2: https://raw.githubusercontent.com/opensciencegrid/%{name}-rpm/master/%{name}.service
+Patch0: centos83mingo.patch
 
 BuildRequires: golang
 Requires(post): systemd
@@ -30,6 +31,11 @@ credentials, and more.
 
 %prep
 %setup -q -n %{name}-rpm-%{version}
+%if 0%{?el8}
+cd %{name}-%{version}
+%patch0 -p1
+cd ..
+%endif
 
 %build
 # starts out in %{name}-rpm-%{version} directory
@@ -92,5 +98,5 @@ if [ $1 -eq 0 ]; then
 %systemd_postun_with_restart %{name}.service
 
 %changelog
-* Mon Feb 15 2021 Dave Dykstra <dwd@fnal.gov> 1.6.2-1
+* Tue Feb 16 2021 Dave Dykstra <dwd@fnal.gov> 1.6.2-1
 - Initial build
