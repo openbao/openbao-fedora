@@ -14,7 +14,7 @@ for OLDBASE in $BASE-*; do
     fi
 done
 rm -rf $BASE-*
-VERSION="`sed -n 's/^Version: //p' vault.spec`"
+VERSION="`sed -n 's/^Version:[ \t]*//p' vault.spec`"
 BASE="$BASE-$VERSION"
 mkdir $BASE
 cd $BASE
@@ -24,11 +24,12 @@ curl -s https://codeload.github.com/hashicorp/vault/tar.gz/v$VERSION | tar xzf -
 cd vault-$VERSION
 $newgit "make bootstrap"
 # MAKE=: prevents it from doing make fmt which does goimports which fails
-$newgit "make static-assets MAKE=:"
+$newgit "make static-dist MAKE=:"
+$newgit "make prep"
 cd ..
 cd ..
 
-rm -rf $GOPATH/pkg/mod/cache
+rm -rf $GOPATH/pkg/mod/cache/vcs
 tar czf $BASE.tar.gz $BASE
 go clean -modcache
 rm -rf $BASE
