@@ -10,6 +10,7 @@ set -ex
 cd "`dirname $0`"
 for OLDBASE in $BASE-*; do
     if [ -d $OLDBASE/gopath ]; then
+	# this is in case it wasn't fully created and chmodded
         GOPATH=$PWD/$OLDBASE/gopath go clean -modcache
     fi
 done
@@ -30,6 +31,6 @@ cd ..
 cd ..
 
 rm -rf $GOPATH/pkg/mod/cache/vcs
+find $GOPATH/pkg/mod -type d ! -perm -200|xargs chmod u+w
 tar --exclude .git -czf $BASE.tar.gz $BASE
-go clean -modcache
 rm -rf $BASE
