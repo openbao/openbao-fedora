@@ -65,6 +65,10 @@ mkdir -p %{buildroot}%{_sharedstatedir}/%{name}
 mkdir -p %{buildroot}/usr/lib/systemd/system/
 cp -p vault.service %{buildroot}/usr/lib/systemd/system/
 
+%clean
+rm -rf %{buildroot}
+rm -rf %{_builddir}/%{name}-*-%{version}
+
 %files
 %{_bindir}/%{name}
 %config(noreplace) %{_sysconfdir}/%{name}.d/%{name}.hcl
@@ -100,5 +104,5 @@ if [ $1 -eq 0 ]; then
 %systemd_postun_with_restart %{name}.service
 
 %changelog
-* Tue Feb 16 2021 Dave Dykstra <dwd@fnal.gov> 1.6.2-1
+* Wed Feb 17 2021 Dave Dykstra <dwd@fnal.gov> 1.6.2-1
 - Initial build
