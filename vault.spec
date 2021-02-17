@@ -5,11 +5,12 @@ Version: 1.6.2
 Release: 1%{?dist}
 Summary: Vault is a tool for securely accessing secrets
 License: MPL
-# This is created by ./make-source-tarball
+# download with:
+# $ curl -o %{name}-rpm-%{version}.tar.gz \
+#    https://codeload.github.com/fermitools/%{name}-rpm/tar.gz/v%{version}
 Source0: %{name}-rpm-%{version}.tar.gz
-Source1: https://raw.githubusercontent.com/opensciencegrid/%{name}-rpm/master/%{name}.hcl
-Source2: https://raw.githubusercontent.com/opensciencegrid/%{name}-rpm/master/%{name}.service
-Patch0: centos83mingo.patch
+# This is created by ./make-source-tarball
+Source1: %{name}-src-%{version}.tar.gz
 
 BuildRequires: golang
 Requires(post): systemd
@@ -31,37 +32,38 @@ credentials, and more.
 
 %prep
 %setup -q -n %{name}-rpm-%{version}
+RPMDIR=`pwd`
+%setup -q -T -b 1 -n %{name}-src-%{version}
 %if 0%{?el8}
 cd %{name}-%{version}
-%patch0 -p1
+patch -p1 <$RPMDIR/centos83mingo.patch
 cd ..
 %endif
 
 %build
-# starts out in %{name}-rpm-%{version} directory
+# starts out in %{name}-src-%{version} directory
 export GOPATH="`pwd`/gopath"
 export PATH=$GOPATH/bin:$PATH
 export GOPROXY=file://$(go env GOMODCACHE)/cache/download
 cd %{name}-%{version}
-# this prevents trying to use git to figure out the version
+# this prevents the build from trying to use git to figure out the version
+#  which fails because there's no git info
 ln -s /bin/true $GOPATH/bin/git
 make dev-ui
 
 %install
+# starts out in %{name}-src-%{version} directory
 mkdir -p %{buildroot}%{_bindir}/
 cp -p %{name}-%{version}/bin/%{name} %{buildroot}%{_bindir}/
 
+cd ../%{name}-rpm-%{version}
 mkdir -p %{buildroot}%{_sysconfdir}/%{name}.d
-cp -p %{SOURCE1} %{buildroot}%{_sysconfdir}/%{name}.d
+cp -p vault.hcl %{buildroot}%{_sysconfdir}/%{name}.d
 
 mkdir -p %{buildroot}%{_sharedstatedir}/%{name}
 
 mkdir -p %{buildroot}/usr/lib/systemd/system/
-cp -p %{SOURCE2} %{buildroot}/usr/lib/systemd/system/
-
-%clean
-rm -rf %{buildroot}
-rm -rf %{_builddir}/*
+cp -p vault.service %{buildroot}/usr/lib/systemd/system/
 
 %files
 %{_bindir}/%{name}

@@ -5,7 +5,7 @@ if [[ "`lsb_release -rs`" =~ ^7\. ]]; then
     newgit="scl enable rh-git218"
 fi
 
-BASE=vault-rpm
+BASE=vault-src
 set -ex
 cd "`dirname $0`"
 for OLDBASE in $BASE-*; do
@@ -30,6 +30,6 @@ cd ..
 cd ..
 
 rm -rf $GOPATH/pkg/mod/cache/vcs
-tar czf $BASE.tar.gz $BASE
+tar --exclude .git -czf $BASE.tar.gz $BASE
 go clean -modcache
 rm -rf $BASE
