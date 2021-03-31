@@ -2,7 +2,7 @@
 
 Name: vault
 Version: 1.7.0
-Release: 1%{?dist}
+Release: 2%{?dist}
 Summary: Vault is a tool for securely accessing secrets
 License: MPL
 # download with:
@@ -70,7 +70,7 @@ rm -rf %{buildroot}
 rm -rf %{_builddir}/%{name}-*-%{version}
 
 %files
-%{_bindir}/%{name}
+%verify(not caps) %{_bindir}/%{name}
 %config(noreplace) %{_sysconfdir}/%{name}.d/%{name}.hcl
 %attr(0750,%{name},%{name}) %dir %{_sharedstatedir}/%{name}
 /usr/lib/systemd/system/%{name}.service
@@ -104,6 +104,9 @@ if [ $1 -eq 0 ]; then
 %systemd_postun_with_restart %{name}.service
 
 %changelog
+* Wed Mar 31 2021 Dave Dykstra <dwd@fnal.gov> 1.7.0-2
+- Add %verify(not caps) to the vault binary to make rpm -V happy
+
 * Thu Mar 25 2021 Dave Dykstra <dwd@fnal.gov> 1.7.0-1
 - Update to upstream 1.7.0
 
