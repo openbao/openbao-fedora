@@ -1,17 +1,20 @@
 #!/bin/bash
 
 newgit="eval"
+gopatch=""
 if [[ "`lsb_release -rs`" =~ ^7\. ]]; then
     newgit="scl enable rh-git218"
+    gopatch=centos7mingo.patch
 fi
 
 BASE=vault-src
 set -ex
 cd "`dirname $0`"
+TOPDIR=$PWD
 for OLDBASE in $BASE-*; do
     if [ -d $OLDBASE/gopath ]; then
 	# this is in case it wasn't fully created and chmodded
-        GOPATH=$PWD/$OLDBASE/gopath go clean -modcache
+        GOPATH=$TOPDIR/$OLDBASE/gopath go clean -modcache
     fi
 done
 rm -rf $BASE-*
@@ -23,6 +26,9 @@ mkdir gopath
 export GOPATH=$PWD/gopath
 curl -s https://codeload.github.com/hashicorp/vault/tar.gz/v$VERSION | tar xzf -
 cd vault-$VERSION
+if [ -n "$gopatch" ]; then
+    patch -p1 <$TOPDIR/$gopatch
+fi
 $newgit "make bootstrap"
 # MAKE=: prevents it from doing make fmt which does goimports which fails
 $newgit "make static-dist MAKE=:"
