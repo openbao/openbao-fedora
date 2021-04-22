@@ -1,8 +1,8 @@
 # Forked from vault.spec by John Boero - jboero@hashicorp.com
 
 Name: vault
-Version: 1.7.0
-Release: 2%{?dist}
+Version: 1.7.1
+Release: 1%{?dist}
 Summary: Vault is a tool for securely accessing secrets
 License: MPL
 # download with:
@@ -89,21 +89,15 @@ exit 0
 
 %preun
 %systemd_preun %{name}.service
-if [ $1 -eq 0 ]; then
-      /usr/bin/systemctl --no-reload disable %{name}.service
-      /usr/bin/systemctl stop %{name}.service >/dev/null 2>&1 ||:
-      /usr/bin/systemctl disable %{name}.service
 
-    fi
-    if [ $1 -eq 1 ]; then
-      /usr/bin/systemctl --no-reload disable %{name}.service
-      /usr/bin/systemctl stop %{name}.service
-    fi
-    
 %postun
 %systemd_postun_with_restart %{name}.service
 
 %changelog
+* Wed Apr 21 2021 Dave Dykstra <dwd@fnal.gov> 1.7.1-1
+- Update to upstream 1.7.1.  Add patch for el7 to allow go 1.15.5.
+- Stop disabling vault service on upgrade.
+
 * Wed Mar 31 2021 Dave Dykstra <dwd@fnal.gov> 1.7.0-2
 - Add %verify(not caps) to the vault binary to make rpm -V happy
 
