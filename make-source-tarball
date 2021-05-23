@@ -37,6 +37,6 @@ cd ..
 cd ..
 
 rm -rf $GOPATH/pkg/mod/cache/vcs
-find $GOPATH/pkg/mod -type d ! -perm -200|xargs chmod u+w
+find $GOPATH/pkg/mod -type d ! -perm -200|xargs -r chmod u+w
 tar --exclude .git -czf $BASE.tar.gz $BASE
 rm -rf $BASE
