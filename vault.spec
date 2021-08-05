@@ -34,11 +34,6 @@ credentials, and more.
 %setup -q -n %{name}-rpm-%{version}
 RPMDIR=`pwd`
 %setup -q -T -b 1 -n %{name}-src-%{version}
-%if 0%{?el8}
-cd %{name}-%{version}
-patch -p1 <$RPMDIR/centos83mingo.patch
-cd ..
-%endif
 
 %build
 # starts out in %{name}-src-%{version} directory
