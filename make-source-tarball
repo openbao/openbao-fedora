@@ -1,20 +1,19 @@
 #!/bin/bash
 
+NODEVERSION=14.17.4
+
 newgit="eval"
-gopatch=""
 if [[ "`lsb_release -rs`" =~ ^7\. ]]; then
     newgit="scl enable rh-git218"
-    gopatch=centos7mingo.patch
 fi
 
 BASE=vault-src
 set -ex
 cd "`dirname $0`"
-TOPDIR=$PWD
 for OLDBASE in $BASE-*; do
     if [ -d $OLDBASE/gopath ]; then
 	# this is in case it wasn't fully created and chmodded
-        GOPATH=$TOPDIR/$OLDBASE/gopath go clean -modcache
+        PATH=$PWD/go/bin:$PATH GOPATH=$PWD/$OLDBASE/gopath go clean -modcache
     fi
 done
 rm -rf $BASE-*
@@ -24,11 +23,23 @@ mkdir $BASE
 cd $BASE
 mkdir gopath
 export GOPATH=$PWD/gopath
+
+# install required node.js version
+curl -sL https://nodejs.org/download/release/v$NODEVERSION/node-v$NODEVERSION-linux-x64.tar.gz | tar -xzf -
+export NODEJS_HOME=$PWD/node-v$NODEVERSION-linux-x64
+PATH=$NODEJS_HOME/bin:$PATH
+node --version
+
+# install vault source
 curl -s https://codeload.github.com/hashicorp/vault/tar.gz/v$VERSION | tar xzf -
+
+# install required go version
+GOVERSION="`sed -n 's/^GO_VERSION_MIN=//p' vault-$VERSION/Makefile`"
+curl -sL https://golang.org/dl/go$GOVERSION.linux-amd64.tar.gz | tar -xzf -
+PATH=$PWD/go/bin:$PATH
+go version
+
 cd vault-$VERSION
-if [ -n "$gopatch" ]; then
-    patch -p1 <$TOPDIR/$gopatch
-fi
 $newgit "make bootstrap"
 # MAKE=: prevents it from doing make fmt which does goimports which fails
 $newgit "make static-dist MAKE=:"
@@ -37,6 +48,7 @@ cd ..
 cd ..
 
 rm -rf $GOPATH/pkg/mod/cache/vcs
+rm -rf $NODEJS_HOME
 find $GOPATH/pkg/mod -type d ! -perm -200|xargs -r chmod u+w
 tar --exclude .git -czf $BASE.tar.gz $BASE
 rm -rf $BASE
