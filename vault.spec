@@ -1,14 +1,11 @@
 # Forked from vault.spec by John Boero - jboero@hashicorp.com
 
 Name: vault
-Version: 1.10.0
+Version: 1.11.1
 Release: 1%{?dist}
 Summary: Vault is a tool for securely accessing secrets
 License: MPL
-# download with:
-# $ curl -o %{name}-rpm-%{version}.tar.gz \
-#    https://codeload.github.com/fermitools/%{name}-rpm/tar.gz/v%{version}
-Source0: %{name}-rpm-%{version}.tar.gz
+Source0: https://github.com/opensciencegrid/%{name}-rpm/archive/v%{version}/%{name}-rpm-%{version}.tar.gz
 # This is created by ./make-source-tarball
 Source1: %{name}-src-%{version}.tar.gz
 
@@ -61,6 +58,9 @@ mkdir -p %{buildroot}/usr/lib/systemd/system/
 cp -p vault.service %{buildroot}/usr/lib/systemd/system/
 
 %clean
+export GOPATH="`pwd`/gopath"
+export PATH=$PWD/go/bin:$GOPATH/bin:$PATH
+go clean -modcache
 rm -rf %{buildroot}
 rm -rf %{_builddir}/%{name}-*-%{version}
 
@@ -89,6 +89,13 @@ exit 0
 %systemd_postun_with_restart %{name}.service
 
 %changelog
+* Thu Jul 28 2022 Dave Dykstra <dwd@fnal.gov> 1.11.1-1
+- Update to upstream 1.11.1, which includes a fix to avoid denial of
+  service on HA installation.
+- Remove $GOPATH/mod/*.* from the source tarball, leaving just
+  $GOPATH/mod/cache/download.  That saves about 300M while still
+  allowing offline builds.
+
 * Wed Mar 23 2022 Dave Dykstra <dwd@fnal.gov> 1.10.0-1
 - Update to upstream 1.10.0
 

@@ -47,8 +47,8 @@ $newgit "make prep"
 cd ..
 cd ..
 
-rm -rf $GOPATH/pkg/mod/cache/vcs
 rm -rf $NODEJS_HOME
 find $GOPATH/pkg/mod -type d ! -perm -200|xargs -r chmod u+w
+rm -rf $GOPATH/pkg/mod/cache/vcs $GOPATH/mod/*.*
 tar --exclude .git -czf $BASE.tar.gz $BASE
 rm -rf $BASE
