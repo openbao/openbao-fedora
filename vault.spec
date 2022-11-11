@@ -1,7 +1,7 @@
 # Forked from vault.spec by John Boero - jboero@hashicorp.com
 
 Name: vault
-Version: 1.11.1
+Version: 1.12.1
 Release: 1%{?dist}
 Summary: Vault is a tool for securely accessing secrets
 License: MPL
@@ -89,6 +89,9 @@ exit 0
 %systemd_postun_with_restart %{name}.service
 
 %changelog
+* Thu Nov 10 2022 Dave Dykstra <dwd@fnal.gov> 1.12.1-1
+- Update to upstream 1.12.1
+
 * Thu Jul 28 2022 Dave Dykstra <dwd@fnal.gov> 1.11.1-1
 - Update to upstream 1.11.1, which includes a fix to avoid denial of
   service on HA installation.
