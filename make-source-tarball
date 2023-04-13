@@ -1,19 +1,36 @@
 #!/bin/bash
 
-NODEVERSION=14.17.4
+# IMPORTANT: this can no longer be run on el7.  Use el8 or 9.  Docker is OK.
+# The main reason is that the required node version expects a newer glibc
+# and it's a lot of trouble to compile that from source.  The generated
+# tarball still works to build an rpm on el7.  Make sure the commands in
+# $REQUIRED are installed.
 
-newgit="eval"
-if [[ "`lsb_release -rs`" =~ ^7\. ]]; then
-    newgit="scl enable rh-git218"
+REQUIRED="git gpg make python3 g++ find"
+NODEVERSION=18.16.0
+YARNVERSION=1.22.19
+
+. /etc/os-release
+
+if [[ "$VERSION" == 7* ]]; then
+    echo "Run this on el8 or el9" >&2
+    exit 2
 fi
+
+for TOOL in $REQUIRED; do
+    if [ ! -x /usr/bin/$TOOL ]; then
+	echo "Required command '$TOOL' missing" >&2
+	exit 2
+    fi
+done
 
 BASE=vault-src
 set -ex
 cd "`dirname $0`"
 for OLDBASE in $BASE-*; do
-    if [ -d $OLDBASE/gopath ]; then
+    if [ -d $OLDBASE/go ]; then
 	# this is in case it wasn't fully created and chmodded
-        PATH=$PWD/go/bin:$PATH GOPATH=$PWD/$OLDBASE/gopath go clean -modcache
+        PATH=$PWD/$OLDBASE/go/bin:$PATH GOPATH=$PWD/$OLDBASE/gopath go clean -modcache
     fi
 done
 rm -rf $BASE-*
@@ -21,34 +38,46 @@ VERSION="`sed -n 's/^Version:[ \t]*//p' vault.spec`"
 BASE="$BASE-$VERSION"
 mkdir $BASE
 cd $BASE
-mkdir gopath
-export GOPATH=$PWD/gopath
 
 # install required node.js version
 curl -sL https://nodejs.org/download/release/v$NODEVERSION/node-v$NODEVERSION-linux-x64.tar.gz | tar -xzf -
 export NODEJS_HOME=$PWD/node-v$NODEVERSION-linux-x64
 PATH=$NODEJS_HOME/bin:$PATH
 node --version
+npx browserslist@latest --update-db
+
+# install yarn 
+YARN_HOME=$PWD/yarn-$YARNVERSION
+mkdir $YARN_HOME
+OLDHOME=$HOME
+HOME=$YARN_HOME
+touch $HOME/.profile
+curl -o- -L https://yarnpkg.com/install.sh | bash -s -- --version $YARNVERSION
+. $HOME/.profile
+gpgconf --kill gpg-agent
+HOME=$OLDHOME
+yarn --version
 
 # install vault source
 curl -s https://codeload.github.com/hashicorp/vault/tar.gz/v$VERSION | tar xzf -
 
 # install required go version
-GOVERSION="`sed -n 's/^GO_VERSION_MIN=//p' vault-$VERSION/Makefile`"
+mkdir gopath
+export GOPATH=$PWD/gopath
+GOVERSION="`cat vault-$VERSION/.go-version`"
 curl -sL https://golang.org/dl/go$GOVERSION.linux-amd64.tar.gz | tar -xzf -
 PATH=$PWD/go/bin:$PATH
 go version
 
 cd vault-$VERSION
-$newgit "make bootstrap"
-# MAKE=: prevents it from doing make fmt which does goimports which fails
-$newgit "make static-dist MAKE=:"
-$newgit "make prep"
+make bootstrap
+make static-dist
+make prep
 cd ..
 cd ..
 
-rm -rf $NODEJS_HOME
+rm -rf $NODEJS_HOME $YARN_HOME
 find $GOPATH/pkg/mod -type d ! -perm -200|xargs -r chmod u+w
-rm -rf $GOPATH/pkg/mod/cache/vcs $GOPATH/mod/*.*
+rm -rf $GOPATH/mod/*.*
 tar --exclude .git -czf $BASE.tar.gz $BASE
 rm -rf $BASE
