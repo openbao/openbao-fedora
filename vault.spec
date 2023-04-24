@@ -38,6 +38,8 @@ export GOPATH="`pwd`/gopath"
 export PATH=$PWD/go/bin:$GOPATH/bin:$PATH
 export GOPROXY=file://$(go env GOMODCACHE)/cache/download
 cd %{name}-%{version}
+# this prevents it from complaining that ui assets are too old
+touch http/web_ui/index.html
 # this prevents the build from trying to use git to figure out the version
 #  which fails because there's no git info
 ln -s /bin/true $GOPATH/bin/git
