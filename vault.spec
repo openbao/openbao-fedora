@@ -1,7 +1,7 @@
 # Forked from vault.spec by John Boero - jboero@hashicorp.com
 
 Name: vault
-Version: 1.13.1
+Version: 1.13.2
 Release: 1%{?dist}
 Summary: Vault is a tool for securely accessing secrets
 License: MPL
@@ -91,6 +91,9 @@ exit 0
 %systemd_postun_with_restart %{name}.service
 
 %changelog
+* Tue May  2 2023 Dave Dykstra <dwd@fnal.gov> 1.13.2-1
+- Update to upstream 1.13.2
+
 * Tue Apr 11 2023 Dave Dykstra <dwd@fnal.gov> 1.13.1-1
 - Update to upstream 1.13.1
 
