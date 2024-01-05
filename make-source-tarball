@@ -7,7 +7,7 @@
 # $REQUIRED are installed.
 
 REQUIRED="git gpg make python3 g++ find"
-NODEVERSION=18.16.0
+NODEVERSION=20.9.0
 YARNVERSION=1.22.19
 
 . /etc/os-release
@@ -40,11 +40,11 @@ mkdir $BASE
 cd $BASE
 
 # install required node.js version
-curl -sL https://nodejs.org/download/release/v$NODEVERSION/node-v$NODEVERSION-linux-x64.tar.gz | tar -xzf -
+curl -sSL https://nodejs.org/download/release/v$NODEVERSION/node-v$NODEVERSION-linux-x64.tar.gz | tar -xzf -
 export NODEJS_HOME=$PWD/node-v$NODEVERSION-linux-x64
 PATH=$NODEJS_HOME/bin:$PATH
 node --version
-npx browserslist@latest --update-db
+npx --yes update-browserslist-db@latest
 
 # install yarn 
 YARN_HOME=$PWD/yarn-$YARNVERSION
@@ -52,20 +52,20 @@ mkdir $YARN_HOME
 OLDHOME=$HOME
 HOME=$YARN_HOME
 touch $HOME/.profile
-curl -o- -L https://yarnpkg.com/install.sh | bash -s -- --version $YARNVERSION
+curl -o- -sSL https://yarnpkg.com/install.sh | bash -s -- --version $YARNVERSION
 . $HOME/.profile
 gpgconf --kill gpg-agent
 HOME=$OLDHOME
 yarn --version
 
 # install vault source
-curl -s https://codeload.github.com/hashicorp/vault/tar.gz/v$VERSION | tar xzf -
+curl -sSL https://codeload.github.com/hashicorp/vault/tar.gz/v$VERSION | tar xzf -
 
 # install required go version
 mkdir gopath
 export GOPATH=$PWD/gopath
 GOVERSION="`cat vault-$VERSION/.go-version`"
-curl -sL https://golang.org/dl/go$GOVERSION.linux-amd64.tar.gz | tar -xzf -
+curl -sSL https://golang.org/dl/go$GOVERSION.linux-amd64.tar.gz | tar -xzf -
 PATH=$PWD/go/bin:$PATH
 go version
 

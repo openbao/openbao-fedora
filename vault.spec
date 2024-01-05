@@ -1,7 +1,7 @@
 # Forked from vault.spec by John Boero - jboero@hashicorp.com
 
 Name: vault
-Version: 1.13.2
+Version: 1.15.4
 Release: 1%{?dist}
 Summary: Vault is a tool for securely accessing secrets
 License: MPL
@@ -38,6 +38,8 @@ export GOPATH="`pwd`/gopath"
 export PATH=$PWD/go/bin:$GOPATH/bin:$PATH
 export GOPROXY=file://$(go env GOMODCACHE)/cache/download
 cd %{name}-%{version}
+# patch URL: https://github.com/hashicorp/vault/pull/24678.patch
+patch -p1 <../../%{name}-rpm-%{version}/24678.patch
 # this prevents it from complaining that ui assets are too old
 touch http/web_ui/index.html
 # this prevents the build from trying to use git to figure out the version
@@ -91,6 +93,9 @@ exit 0
 %systemd_postun_with_restart %{name}.service
 
 %changelog
+* Thu Jan  4 2024 Dave Dykstra <dwd@fnal.gov> 1.15.4-1
+- Update to upstream 1.15.4
+
 * Tue May  2 2023 Dave Dykstra <dwd@fnal.gov> 1.13.2-1
 - Update to upstream 1.13.2
 
