@@ -1,14 +1,12 @@
 #!/bin/bash
 
-# IMPORTANT: this can no longer be run on el7.  Use el8 or 9.  Docker is OK.
-# The main reason is that the required node version expects a newer glibc
-# and it's a lot of trouble to compile that from source.  The generated
-# tarball still works to build an rpm on el7.  Make sure the commands in
-# $REQUIRED are installed.
+# This writes temporary files to $TMPDIR because otherwise the vault
+# compilation tools incorrectly detects its source as being under git
+# when it detects the vault-rpm parent git.
 
 REQUIRED="git gpg make python3 g++ find"
-NODEVERSION=20.9.0
-YARNVERSION=1.22.19
+NODEVERSION=22.5.1
+YARNVERSION=1.22.22
 
 . /etc/os-release
 
@@ -27,6 +25,8 @@ done
 BASE=vault-src
 set -ex
 cd "`dirname $0`"
+HERE=$PWD
+cd ${TMPDIR:-/tmp}
 for OLDBASE in $BASE-*; do
     if [ -d $OLDBASE/go ]; then
 	# this is in case it wasn't fully created and chmodded
@@ -34,7 +34,7 @@ for OLDBASE in $BASE-*; do
     fi
 done
 rm -rf $BASE-*
-VERSION="`sed -n 's/^Version:[ \t]*//p' vault.spec`"
+VERSION="`sed -n 's/^Version:[ \t]*//p' $HERE/vault.spec`"
 BASE="$BASE-$VERSION"
 mkdir $BASE
 cd $BASE
@@ -44,7 +44,7 @@ curl -sSL https://nodejs.org/download/release/v$NODEVERSION/node-v$NODEVERSION-l
 export NODEJS_HOME=$PWD/node-v$NODEVERSION-linux-x64
 PATH=$NODEJS_HOME/bin:$PATH
 node --version
-npx --yes update-browserslist-db@latest
+#npx --yes update-browserslist-db@latest
 
 # install yarn 
 YARN_HOME=$PWD/yarn-$YARNVERSION
@@ -66,7 +66,7 @@ mkdir gopath
 export GOPATH=$PWD/gopath
 GOVERSION="`cat vault-$VERSION/.go-version`"
 curl -sSL https://golang.org/dl/go$GOVERSION.linux-amd64.tar.gz | tar -xzf -
-PATH=$PWD/go/bin:$PATH
+PATH=$PWD/go/bin:$GOPATH/bin:$PATH
 go version
 
 cd vault-$VERSION
@@ -77,7 +77,7 @@ cd ..
 cd ..
 
 rm -rf $NODEJS_HOME $YARN_HOME
-find $GOPATH/pkg/mod -type d ! -perm -200|xargs -r chmod u+w
+find $GOPATH/pkg/mod -type d ! -perm -200 -print0|xargs -0 -r chmod u+w
 rm -rf $GOPATH/mod/*.*
-tar --exclude .git -czf $BASE.tar.gz $BASE
+tar --exclude .git -czf $HERE/$BASE.tar.gz $BASE
 rm -rf $BASE
