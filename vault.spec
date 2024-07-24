@@ -1,7 +1,7 @@
 # Forked from vault.spec by John Boero - jboero@hashicorp.com
 
 Name: vault
-Version: 1.15.4
+Version: 1.17.2
 Release: 1%{?dist}
 Summary: Vault is a tool for securely accessing secrets
 License: MPL
@@ -38,8 +38,6 @@ export GOPATH="`pwd`/gopath"
 export PATH=$PWD/go/bin:$GOPATH/bin:$PATH
 export GOPROXY=file://$(go env GOMODCACHE)/cache/download
 cd %{name}-%{version}
-# patch URL: https://github.com/hashicorp/vault/pull/24678.patch
-patch -p1 <../../%{name}-rpm-%{version}/24678.patch
 # this prevents it from complaining that ui assets are too old
 touch http/web_ui/index.html
 # this prevents the build from trying to use git to figure out the version
@@ -49,17 +47,20 @@ make dev-ui
 
 %install
 # starts out in %{name}-src-%{version} directory
-mkdir -p %{buildroot}%{_bindir}/
-cp -p %{name}-%{version}/bin/%{name} %{buildroot}%{_bindir}/
+mkdir -p %{buildroot}%{_libexecdir}/%{name}
+cp -p %{name}-%{version}/bin/%{name} %{buildroot}%{_libexecdir}/%{name}/
 
 cd ../%{name}-rpm-%{version}
+mkdir -p %{buildroot}%{_bindir}/
+cp -p vault.sh %{buildroot}%{_bindir}/%{name}
+
 mkdir -p %{buildroot}%{_sysconfdir}/%{name}.d
-cp -p vault.hcl %{buildroot}%{_sysconfdir}/%{name}.d
+cp -p vault.hcl %{buildroot}%{_sysconfdir}/%{name}.d/%{name}.hcl
 
 mkdir -p %{buildroot}%{_sharedstatedir}/%{name}
 
 mkdir -p %{buildroot}/usr/lib/systemd/system/
-cp -p vault.service %{buildroot}/usr/lib/systemd/system/
+cp -p vault.service %{buildroot}/usr/lib/systemd/system/%{name}.service
 
 %clean
 export GOPATH="`pwd`/gopath"
@@ -70,6 +71,7 @@ rm -rf %{_builddir}/%{name}-*-%{version}
 
 %files
 %verify(not caps) %{_bindir}/%{name}
+%verify(not caps) %{_libexecdir}/%{name}/%{name}
 %config(noreplace) %{_sysconfdir}/%{name}.d/%{name}.hcl
 %attr(0750,%{name},%{name}) %dir %{_sharedstatedir}/%{name}
 /usr/lib/systemd/system/%{name}.service
@@ -93,6 +95,12 @@ exit 0
 %systemd_postun_with_restart %{name}.service
 
 %changelog
+* Mon Jul 22 2024 Dave Dykstra <dwd@fnal.gov> 1.17.2-1
+- Update to upstream 1.17.2
+- Add a temporary wrapper script on the vault command to avoid an irrelevant
+  warning issued by the gosnowflake dependency when DBUS_SESSION_BUS_ADDRESS
+  is not set
+
 * Thu Jan  4 2024 Dave Dykstra <dwd@fnal.gov> 1.15.4-1
 - Update to upstream 1.15.4
 
