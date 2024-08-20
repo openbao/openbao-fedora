@@ -56,6 +56,9 @@ yarn --version
 # install source
 curl -sSL https://codeload.github.com/$ORG/$PKG/tar.gz/v$VERSION | tar xzf -
 
+mkdir gopath
+export GOPATH=$PWD/gopath
+
 cd $PKG-$VERSION
 make bootstrap
 make static-dist
@@ -65,6 +68,6 @@ cd ..
 
 rm -rf $NODEJS_HOME $YARN_HOME
 find $GOPATH/pkg/mod -type d ! -perm -200 -print0|xargs -0 -r chmod u+w
-rm -rf $GOPATH/mod/*.*
+rm -rf $GOPATH/pkg/mod/*.*
 tar --exclude .git -czf $HERE/$BASE.tar.gz $BASE
 rm -rf $BASE
