@@ -1,15 +1,17 @@
 # Forked from vault.spec by John Boero - jboero@hashicorp.com
 
+%define tarrrelease -2
+
 Name: vault
 Version: 1.17.2
-Release: 1%{?dist}
+Release: 2%{?dist}
 Summary: Vault is a tool for securely accessing secrets
 License: MPL
 Source0: https://github.com/opensciencegrid/%{name}-rpm/archive/v%{version}/%{name}-rpm-%{version}.tar.gz
 # This is created by ./make-source-tarball
-Source1: %{name}-src-%{version}.tar.gz
+Source1: %{name}-src-%{version}%{tarrelease}.tar.gz
 
-#BuildRequires: golang
+BuildRequires: golang
 Requires(post): systemd
 Requires(preun): systemd
 Requires(postun): systemd
@@ -35,7 +37,7 @@ RPMDIR=`pwd`
 %build
 # starts out in %{name}-src-%{version} directory
 export GOPATH="`pwd`/gopath"
-export PATH=$PWD/go/bin:$GOPATH/bin:$PATH
+export PATH=$GOPATH/bin:$PATH
 export GOPROXY=file://$(go env GOMODCACHE)/cache/download
 cd %{name}-%{version}
 # this prevents it from complaining that ui assets are too old
@@ -64,7 +66,7 @@ cp -p vault.service %{buildroot}/usr/lib/systemd/system/%{name}.service
 
 %clean
 export GOPATH="`pwd`/gopath"
-export PATH=$PWD/go/bin:$GOPATH/bin:$PATH
+export PATH=$GOPATH/bin:$PATH
 go clean -modcache
 rm -rf %{buildroot}
 rm -rf %{_builddir}/%{name}-*-%{version}
@@ -95,6 +97,10 @@ exit 0
 %systemd_postun_with_restart %{name}.service
 
 %changelog
+* Tue Aug 20 2024 Dave Dykstra <dwd@fnal.gov> 1.17.2-2
+- Stop including go in the source tarball, instead assume the build pulls
+  in a new enough version of golang.
+
 * Mon Jul 22 2024 Dave Dykstra <dwd@fnal.gov> 1.17.2-1
 - Update to upstream 1.17.2
 - Add a temporary wrapper script on the vault command to avoid an irrelevant

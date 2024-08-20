@@ -4,16 +4,9 @@
 # compilation tools incorrectly detects its source as being under git
 # when it detects the vault-rpm parent git.
 
-REQUIRED="git gpg make python3 g++ find"
+REQUIRED="git gpg make python3 g++ find tar"
 NODEVERSION=22.5.1
 YARNVERSION=1.22.22
-
-. /etc/os-release
-
-if [[ "$VERSION" == 7* ]]; then
-    echo "Run this on el8 or el9" >&2
-    exit 2
-fi
 
 for TOOL in $REQUIRED; do
     if [ ! -x /usr/bin/$TOOL ]; then
@@ -22,7 +15,9 @@ for TOOL in $REQUIRED; do
     fi
 done
 
-BASE=vault-src
+ORG=hashicorp
+PKG=vault
+BASE=$PKG-src
 set -ex
 cd "`dirname $0`"
 HERE=$PWD
@@ -34,7 +29,7 @@ for OLDBASE in $BASE-*; do
     fi
 done
 rm -rf $BASE-*
-VERSION="`sed -n 's/^Version:[ \t]*//p' $HERE/vault.spec`"
+VERSION="`sed -n 's/^Version:[ \t]*//p' $HERE/$PKG.spec|sed 's/~/-/'`"
 BASE="$BASE-$VERSION"
 mkdir $BASE
 cd $BASE
@@ -58,18 +53,10 @@ gpgconf --kill gpg-agent
 HOME=$OLDHOME
 yarn --version
 
-# install vault source
-curl -sSL https://codeload.github.com/hashicorp/vault/tar.gz/v$VERSION | tar xzf -
+# install source
+curl -sSL https://codeload.github.com/$ORG/$PKG/tar.gz/v$VERSION | tar xzf -
 
-# install required go version
-mkdir gopath
-export GOPATH=$PWD/gopath
-GOVERSION="`cat vault-$VERSION/.go-version`"
-curl -sSL https://golang.org/dl/go$GOVERSION.linux-amd64.tar.gz | tar -xzf -
-PATH=$PWD/go/bin:$GOPATH/bin:$PATH
-go version
-
-cd vault-$VERSION
+cd $PKG-$VERSION
 make bootstrap
 make static-dist
 make prep
