@@ -1,6 +1,6 @@
 # Forked from vault.spec by John Boero - jboero@hashicorp.com
 
-%define tarrrelease -2
+%define tarrelease -2
 
 Name: vault
 Version: 1.17.2
