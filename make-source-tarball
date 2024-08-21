@@ -68,6 +68,8 @@ cd ..
 
 rm -rf $NODEJS_HOME $YARN_HOME
 find $GOPATH/pkg/mod -type d ! -perm -200 -print0|xargs -0 -r chmod u+w
-rm -rf $GOPATH/pkg/mod/*.*
+# Remove $GOPATH/pkg/mod/*.* to save space and remove $GOPATH/bin/*
+# because they are architecture specific.  They will be rebuilt when needed.
+rm -rf $GOPATH/pkg/mod/*.* $GOPATH/bin/*
 tar --exclude .git -czf $HERE/$BASE.tar.gz $BASE
 rm -rf $BASE
