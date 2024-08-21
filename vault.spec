@@ -45,7 +45,7 @@ touch http/web_ui/index.html
 # this prevents the build from trying to use git to figure out the version
 #  which fails because there's no git info
 ln -s /bin/true $GOPATH/bin/git
-make dev-ui
+make tools dev-ui
 
 %install
 # starts out in %{name}-src-%{version} directory
