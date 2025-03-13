@@ -1,4 +1,4 @@
-# Full configuration options can be found at https://www.vaultproject.io/docs/configuration
+# Full configuration options can be found at https://openbao.org/docs/configuration
 
 ui = true
 
@@ -6,12 +6,12 @@ ui = true
 #disable_mlock = true
 
 storage "file" {
-  path = "/opt/vault/data"
+  path = "/var/lib/openbao/data"
 }
 
 #storage "consul" {
 #  address = "127.0.0.1:8500"
-#  path    = "vault"
+#  path    = "openbao"
 #}
 
 # HTTP listener
@@ -23,8 +23,8 @@ storage "file" {
 # HTTPS listener
 listener "tcp" {
   address       = "0.0.0.0:8200"
-  tls_cert_file = "/opt/vault/tls/tls.crt"
-  tls_key_file  = "/opt/vault/tls/tls.key"
+  tls_cert_file = "/etc/openbao.d/tls/tls.crt"
+  tls_key_file  = "/etc/openbao.d/tls/tls.key"
 }
 
 # Example AWS KMS auto unseal
@@ -35,9 +35,9 @@ listener "tcp" {
 
 # Example HSM auto unseal
 #seal "pkcs11" {
-#  lib            = "/usr/vault/lib/libCryptoki2_64.so"
+#  lib            = "/usr/openbao/lib/libCryptoki2_64.so"
 #  slot           = "0"
 #  pin            = "AAAA-BBBB-CCCC-DDDD"
-#  key_label      = "vault-hsm-key"
-#  hmac_key_label = "vault-hsm-hmac-key"
+#  key_label      = "openbao-hsm-key"
+#  hmac_key_label = "openbao-hsm-hmac-key"
 #}
