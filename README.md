@@ -1,4 +1,3 @@
-# vault-rpm
+# openbao-rpm
 
-RPM packaging for vault that's compatible with the packaging direct from
-Hashicorp but compiles from source.
+RPM packaging for openbao that is upward compatible from vault RPM packaging
