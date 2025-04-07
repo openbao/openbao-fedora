@@ -8,7 +8,7 @@
 
 Name: openbao
 Version: 2.2.0
-Release: 1%{?dist}
+Release: 2%{?dist}
 Summary: Openbao is a tool for securely accessing secrets
 License: MPL
 Source0: https://github.com/opensciencegrid/%{name}-rpm/archive/v%{package_version}/%{name}-rpm-%{package_version}.tar.gz
@@ -55,12 +55,25 @@ touch http/web_ui/index.html
 # this prevents the build from trying to use git to figure out the version
 #  which fails because there's no git info
 ln -s /bin/true $GOPATH/bin/git
+
 GO_BUILD_GCFLAGS=
+GO_BUILD_LDFLAGS="-X github.com/openbao/openbao/version.fullVersion=%{version}-%{release}"
+GO_BUILD_LDFLAGS+=" -X github.com/openbao/openbao/version.GitCommit="
+BUILD_DATE="$(date --utc +%Y-%m-%dT%H:%M:%SZ)"
+GO_BUILD_LDFLAGS+=" -X github.com/openbao/openbao/version.BuildDate=${BUILD_DATE}"
+GO_BUILD_TAGS="ui"
 %if "%{?go_debug}" != ""
-# add debugging flags
+# add debugging & testing flags
 GO_BUILD_GCFLAGS="all=-N -l"
+GO_BUILD_LDFLAGS+=" -X github.com/openbao/openbao/version.VersionMetadata=testonly"
+# openbao documentation says testonly should not be used for production builds
+GO_BUILD_TAGS+=" testonly"
 %endif
-make dev-ui GO_BUILD_GCFLAGS="$GO_BUILD_GCFLAGS"
+
+# instructions from https://openbao.org/docs/contributing/packaging/#ui-release
+# The ui release is already pre-built in the source tarball
+go build -gcflags "${GO_BUILD_GCFLAGS}" -ldflags "${GO_BUILD_LDFLAGS}" -o bin/bao -tags "${GO_BUILD_TAGS}"
+
 
 %install
 # starts out in %{name}-src-%{package_version} directory
@@ -144,6 +157,11 @@ if [ -f "%{wasrunningfile}" ]; then
 fi
 
 %changelog
+* Mon Apr  7 2025 Dave Dykstra <dwd@fnal.gov> 2.2.0-2
+- Update to use official build instructions, including showing the correct
+  version number in the `bao status` command and not using the testonly
+  build tag unless the go_debug macro is enabled.
+
 * Thu Mar  6 2025 Dave Dykstra <dwd@fnal.gov> 2.2.0-1
 - Convert to use openbao instead of vault.
 - Include required go version in source tarball again.
