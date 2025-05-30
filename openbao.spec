@@ -122,14 +122,14 @@ getent passwd %{oldname} > /dev/null || \
 # or upgrade.
 %global wasenabledfile /var/run/.%{oldname}-was-enabled
 rm -f %{wasenabledfile}
-if systemctl is-enabled %{oldname} &>/dev/null; then
+if systemctl -q is-enabled %{oldname} &>/dev/null; then
     touch %{wasenabledfile}
 fi
 
 # If the service is running, stop it now and restart it after install
 %global wasrunningfile /var/run/.%{oldname}-was-running
 rm -f %{wasrunningfile}
-if systemctl is-active %{oldname} &>/dev/null; then
+if systemctl -q is-active %{oldname} &>/dev/null; then
     touch %{wasrunningfile}
 fi
 
@@ -147,7 +147,7 @@ systemctl daemon-reload
 %posttrans
 if [ -f "%{wasenabledfile}" ]; then
     rm -f %{wasenabledfile}
-    if ! systemctl is-enabled %{oldname}; then
+    if ! systemctl -q is-enabled %{oldname}; then
         systemctl enable %{oldname}
     fi
 fi
