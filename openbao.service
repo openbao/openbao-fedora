@@ -3,11 +3,11 @@ Description="Openbao - A tool for managing secrets"
 Documentation=https://openbao.org/docs/
 Requires=network-online.target
 After=network-online.target
-ConditionFileNotEmpty=/etc/vault.d/vault.hcl
+ConditionFileNotEmpty=/etc/openbao.d/openbao.hcl
 
 [Service]
-User=vault
-Group=vault
+User=openbao
+Group=openbao
 ProtectSystem=full
 ProtectHome=read-only
 PrivateTmp=yes
@@ -16,7 +16,7 @@ SecureBits=keep-caps
 AmbientCapabilities=CAP_IPC_LOCK
 CapabilityBoundingSet=CAP_SYSLOG CAP_IPC_LOCK
 NoNewPrivileges=yes
-ExecStart=/usr/bin/bao server -config=/etc/vault.d/vault.hcl
+ExecStart=/usr/bin/bao server -config=/etc/openbao.d/openbao.hcl
 ExecReload=/bin/kill --signal HUP $MAINPID
 KillMode=process
 KillSignal=SIGINT

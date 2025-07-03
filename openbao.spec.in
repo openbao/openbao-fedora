@@ -1,0 +1,324 @@
+# Loosely based on vault.spec by John Boero - jboero@hashicorp.com
+
+# This macro can be slightly different than %%{version}.
+# For example, it has dash instead of tilde for release candidates.
+%global package_version 2.3.1
+
+%global oldname vault
+
+Name: openbao
+Version: 2.3.1
+Release: 1%{?dist}
+Summary: A tool for securely accessing secrets
+# See LICENSE for primary license
+# See LICENSE_DEPENDENCIES.md for bundled dependencies
+License: MPL-2.0
+Source0: https://github.com/opensciencegrid/%{name}-rpm/archive/v%{package_version}/%{name}-rpm-%{package_version}.tar.gz
+# This is created by ./make-source-tarball and included in release assets
+Source1: https://github.com/opensciencegrid/%{name}-rpm/releases/download/v%{package_version}/%{name}-src-%{package_version}.tar.gz
+
+BuildRequires: golang
+Requires(post): systemd
+Requires(preun): systemd
+Requires(postun): systemd
+URL: https://openbao.org
+
+# This line gets replaced by bundled provides
+
+# This is to avoid
+#   *** ERROR: No build ID note found
+%global debug_package %{nil}
+
+%description
+Openbao secures, stores, and tightly controls access to tokens, passwords,
+certificates, API keys, and other secrets in modern computing. Openbao handles
+leasing, key revocation, key rolling, and auditing. Through a unified API, users
+can access an encrypted Key/Value store and network encryption-as-a-service, or
+generate AWS IAM/STS credentials, SQL/NoSQL databases, X.509 certificates, SSH
+credentials, and more.
+
+%package %{oldname}-compat
+Summary: Vault-compatible command and service
+Requires: %{name}%{?_isa} = %{version}-%{release}
+Provides: %{oldname} = %{version}-%{release}
+Obsoletes: %{oldname} < 2.0
+
+%description %{oldname}-compat
+Provides a compatibility layer on top of OpenBao to emulate a Hashicorp
+Vault package.
+
+%prep
+%setup -q -n %{name}-rpm-%{package_version}
+RPMDIR=`pwd`
+%setup -q -T -b 1 -n %{name}-src-%{package_version}
+
+%build
+# starts out in %%{name}-src-%%{package_version} directory
+cd go/src
+./make.bash
+cd ../..
+export GOPATH="`pwd`/gopath"
+export PATH=$PWD/go/bin:$GOPATH/bin:$PATH
+export GOPROXY=file://$(go env GOMODCACHE)/cache/download
+cd %{name}-%{package_version}
+# this prevents it from complaining that ui assets are too old
+touch http/web_ui/index.html
+# this prevents the build from trying to use git to figure out the version
+#  which fails because there's no git info
+ln -s /bin/true $GOPATH/bin/git
+
+GO_BUILD_GCFLAGS=
+GO_BUILD_LDFLAGS="-X github.com/%{name}/%{name}/version.fullVersion=%{version}-%{release}"
+GO_BUILD_LDFLAGS+=" -X github.com/%{name}/%{name}/version.GitCommit="
+BUILD_DATE="$(date --utc +%Y-%m-%dT%H:%M:%SZ)"
+GO_BUILD_LDFLAGS+=" -X github.com/%{name}/%{name}/version.BuildDate=${BUILD_DATE}"
+GO_BUILD_TAGS="ui"
+%if "%{?go_debug}" != ""
+# add debugging & testing flags
+GO_BUILD_GCFLAGS="all=-N -l"
+GO_BUILD_LDFLAGS+=" -X github.com/%{name}/%{name}/version.VersionMetadata=testonly"
+# openbao documentation says testonly should not be used for production builds
+GO_BUILD_TAGS+=" testonly"
+%endif
+
+# instructions from https://openbao.org/docs/contributing/packaging/#ui-release
+# The ui release is already pre-built in the source tarball
+go build -gcflags "${GO_BUILD_GCFLAGS}" -ldflags "${GO_BUILD_LDFLAGS}" -buildvcs=false -o bin/bao -tags "${GO_BUILD_TAGS}"
+
+
+%install
+# starts out in %%{name}-src-%%{package_version} directory
+mkdir -p %{buildroot}%{_bindir}/
+cp -p %{name}-%{package_version}/bin/bao %{buildroot}%{_bindir}/
+strip %{buildroot}%{_bindir}/bao
+ln -s bao %{buildroot}%{_bindir}/%{oldname}
+
+cp %{name}-%{package_version}/LICENSE* .
+cp %{name}-%{package_version}/README.md .
+cp %{name}-%{package_version}/CHANGELOG.md .
+
+cd ../%{name}-rpm-%{package_version}
+mkdir -p %{buildroot}%{_sysconfdir}/%{name}.d
+cp -p %{name}.hcl %{buildroot}%{_sysconfdir}/%{name}.d
+ln -s %{name}.d %{buildroot}%{_sysconfdir}/%{oldname}.d
+
+mkdir -p %{buildroot}/%{_datadir}/man/man1
+gzip -c bao.1 >%{buildroot}%{_datadir}/man/man1/bao.1.gz
+ln -s bao.1 %{buildroot}%{_datadir}/man/man1/%{oldname}.1.gz
+
+mkdir -p %{buildroot}%{_sharedstatedir}/%{name}
+ln -s %{name} %{buildroot}%{_sharedstatedir}/%{oldname}
+
+mkdir -p %{buildroot}/usr/lib/systemd/system/
+cp -p %{name}.service %{buildroot}/usr/lib/systemd/system/
+ln -s %{name}.service %{buildroot}/usr/lib/systemd/system/%{oldname}.service
+
+%files
+%verify(not caps) %{_bindir}/bao
+%dir %{_sysconfdir}/%{name}.d
+%ghost %attr(0644,root,root) %{_sysconfdir}/%{oldname}.d.rpmmoved
+%config(noreplace) %{_sysconfdir}/%{name}.d/%{name}.hcl
+%attr(0700,%{name},%{name}) %dir %{_sharedstatedir}/%{name}
+%ghost %attr(0644,root,root) %{_sharedstatedir}/%{oldname}.rpmmoved
+/usr/lib/systemd/system/%{name}.service
+%{_datadir}/man/man1/bao.1.gz
+%license LICENSE
+%license LICENSE_DEPENDENCIES.md
+%doc README.md
+%doc CHANGELOG.md
+
+%files %{oldname}-compat
+%{_bindir}/%{oldname}
+%{_sysconfdir}/%{oldname}.d
+%{_sharedstatedir}/%{oldname}
+%{_datadir}/man/man1/%{oldname}.1.gz
+/usr/lib/systemd/system/%{oldname}.service
+
+# Older versions of this package had opposite symlinks for vault compatibility,
+#   and rpm needs help to handle that.
+# See https://fedoraproject.org/wiki/Packaging:Directory_Replacement
+
+%pretrans -p <lua>
+path = "%{_sysconfdir}/%{name}.d"
+st = posix.stat(path)
+if st and st.type == "link" then
+  os.remove(path)
+end
+path = "%{_sharedstatedir}/%{name}"
+st = posix.stat(path)
+if st and st.type == "link" then
+  os.remove(path)
+end
+path = "%{_sysconfdir}/%{oldname}.d"
+st = posix.stat(path)
+if st and st.type == "directory" then
+  status = os.rename(path, path .. ".rpmmoved")
+  if not status then
+    suffix = 0
+    while not status do
+      suffix = suffix + 1
+      status = os.rename(path .. ".rpmmoved", path .. ".rpmmoved." .. suffix)
+    end
+    os.rename(path, path .. ".rpmmoved")
+  end
+end
+path = "%{_sharedstatedir}/%{oldname}"
+st = posix.stat(path)
+if st and st.type == "directory" then
+  status = os.rename(path, path .. ".rpmmoved")
+  if not status then
+    suffix = 0
+    while not status do
+      suffix = suffix + 1
+      status = os.rename(path .. ".rpmmoved", path .. ".rpmmoved." .. suffix)
+    end
+    os.rename(path, path .. ".rpmmoved")
+  end
+end
+
+%pre
+getent group %{name} > /dev/null || groupadd -r %{name}
+getent passwd %{name} > /dev/null || \
+    useradd -r -d %{_sharedstatedir}/%{name} -g %{name} \
+    -s /sbin/nologin -c "%{name} secret management tool" %{name}
+# When the package name changes the old package doesn't see the new one as
+# an upgrade and so it disables the service.  Keep track and re-enable
+# regardless of whether the scriptlet parameter says it is an install
+# or upgrade.
+%global wasenabledfile /var/run/.%{name}-was-enabled
+rm -f %{wasenabledfile}
+if systemctl -q is-enabled %{name} &>/dev/null; then
+    touch %{wasenabledfile}
+fi
+
+# If the service is running, stop it now and restart it after install
+%global wasrunningfile /var/run/.%{name}-was-running
+rm -f %{wasrunningfile}
+if systemctl -q is-active %{name} &>/dev/null; then
+    touch %{wasrunningfile}
+    systemctl stop %{name}
+fi
+
+%post
+setcap cap_ipc_lock=+ep %{_bindir}/bao
+systemctl daemon-reload
+%systemd_post %{name}.service
+# If the %%pretrans step above moved the sysconfdir to ".rpmmoved" then
+# the cleanup of the old hcl file will fail, so move it back.
+if [ -f %{_sysconfdir}/%{oldname}.d.rpmmoved/%{oldname}.hcl ]; then
+    if [ ! -L %{_sysconfdir}/%{oldname}.d ]; then
+        # compat package not (yet) installed so create the link
+        # it will be removed in %%posttrans if compat package is not installed
+        ln -s %{name}.d %{_sysconfdir}/%{oldname}.d
+    fi
+    mv %{_sysconfdir}/%{oldname}.d.rpmmoved/%{oldname}.hcl %{_sysconfdir}/%{oldname}.d/
+fi
+
+%preun
+%systemd_preun %{name}.service
+
+%postun
+%systemd_postun_with_restart %{name}.service
+
+%posttrans
+if [ -f "%{wasenabledfile}" ]; then
+    rm -f %{wasenabledfile}
+    if ! systemctl -q is-enabled %{name}; then
+        systemctl enable %{name}
+    fi
+fi
+if [ -f "%{wasrunningfile}" ]; then
+    rm -f %{wasrunningfile}
+    systemctl start %{name}
+fi
+if [ -L %{_sysconfdir}/%{oldname}.d ] && [ ! -L %{_sharedstatedir}/%{oldname} ]; then
+    # clean up the temporary symlink created in %%post
+    rm %{_sysconfdir}/%{oldname}.d
+fi
+
+%changelog
+* Thu Jul  3 2025 Dave Dykstra <dwd@fnal.gov> 2.3.1-1
+- In preparation for moving to EPEL and Fedora, split vault compatibility
+  out into a separate openbao-vault-compat subpackage.
+  As a result the new package has some incompatibilities and so is not a
+  complete drop-in replacement: it uses an openbao user id and group
+  instead of vault and the default configuration file is called openbao.hcl
+  instead of vault.hcl.
+
+* Mon Apr  7 2025 Dave Dykstra <dwd@fnal.gov> 2.2.0-2
+- Update to use official build instructions, including showing the correct
+  version number in the `bao status` command and not using the testonly
+  build tag unless the go_debug macro is enabled.
+
+* Thu Mar  6 2025 Dave Dykstra <dwd@fnal.gov> 2.2.0-1
+- Convert to use openbao instead of vault.
+- Include required go version in source tarball again.
+
+* Tue Aug 20 2024 Dave Dykstra <dwd@fnal.gov> 1.17.2-2
+- Stop including go in the source tarball, instead assume the build pulls
+  in a new enough version of golang.
+
+* Mon Jul 22 2024 Dave Dykstra <dwd@fnal.gov> 1.17.2-1
+- Update to upstream 1.17.2
+- Add a temporary wrapper script on the vault command to avoid an irrelevant
+  warning issued by the gosnowflake dependency when DBUS_SESSION_BUS_ADDRESS
+  is not set
+
+* Thu Jan  4 2024 Dave Dykstra <dwd@fnal.gov> 1.15.4-1
+- Update to upstream 1.15.4
+
+* Tue May  2 2023 Dave Dykstra <dwd@fnal.gov> 1.13.2-1
+- Update to upstream 1.13.2
+
+* Tue Apr 11 2023 Dave Dykstra <dwd@fnal.gov> 1.13.1-1
+- Update to upstream 1.13.1
+
+* Thu Nov 10 2022 Dave Dykstra <dwd@fnal.gov> 1.12.1-1
+- Update to upstream 1.12.1
+
+* Thu Jul 28 2022 Dave Dykstra <dwd@fnal.gov> 1.11.1-1
+- Update to upstream 1.11.1, which includes a fix to avoid denial of
+  service on HA installation.
+- Remove $GOPATH/mod/*.* from the source tarball, leaving just
+  $GOPATH/mod/cache/download.  That saves about 300M while still
+  allowing offline builds.
+
+* Wed Mar 23 2022 Dave Dykstra <dwd@fnal.gov> 1.10.0-1
+- Update to upstream 1.10.0
+
+* Tue Feb 15 2022 Dave Dykstra <dwd@fnal.gov> 1.9.3-1
+- Update to upstream 1.9.3
+
+* Wed Dec  1 2021 Dave Dykstra <dwd@fnal.gov> 1.9.0-1
+- Update to upstream 1.9.0
+
+* Thu Nov  4 2021 Dave Dykstra <dwd@fnal.gov> 1.8.4-1
+- Update to upstream 1.8.4
+
+* Fri Aug 27 2021 Dave Dykstra <dwd@fnal.gov> 1.8.2-1
+- Update to upstream 1.8.2
+
+* Thu Aug  5 2021 Dave Dykstra <dwd@fnal.gov> 1.8.1-1
+- Update to upstream 1.8.1
+
+* Wed Aug  4 2021 Dave Dykstra <dwd@fnal.gov> 1.8.0-1
+- Update to upstream 1.8.0
+
+* Thu Jun 17 2021 Dave Dykstra <dwd@fnal.gov> 1.7.3-1
+- Update to upstream 1.7.3
+
+* Thu May 20 2021 Dave Dykstra <dwd@fnal.gov> 1.7.2-1
+- Update to upstream 1.7.2, a security release.
+
+* Wed Apr 21 2021 Dave Dykstra <dwd@fnal.gov> 1.7.1-1
+- Update to upstream 1.7.1.  Add patch for el7 to allow go 1.15.5.
+- Stop disabling vault service on upgrade.
+
+* Wed Mar 31 2021 Dave Dykstra <dwd@fnal.gov> 1.7.0-2
+- Add %verify(not caps) to the vault binary to make rpm -V happy
+
+* Thu Mar 25 2021 Dave Dykstra <dwd@fnal.gov> 1.7.0-1
+- Update to upstream 1.7.0
+
+* Wed Feb 17 2021 Dave Dykstra <dwd@fnal.gov> 1.6.2-1
+- Initial build

@@ -1,0 +1,31 @@
+#!/bin/bash -ex
+# this script runs as root under docker --privileged
+
+# install dependencies
+
+dnf -y install git gpg make python3 gcc-c++ findutils golang
+dnf install -y sudo rpm-build
+
+# switch to an unprivileged user with sudo privileges
+useradd -u 1000 --create-home -s /bin/bash testuser
+echo "Defaults:testuser env_keep=DOCKER_HOST" >>/etc/sudoers
+echo "testuser ALL=(ALL) NOPASSWD: ALL" >>/etc/sudoers
+mkdir -p /local
+chown -R testuser . /local
+
+# Be careful not to use unescaped single quotes in these commands
+su testuser -c '
+  set -x
+  set -e
+  VERSION="`sed -n "s/^Version: //p" src/openbao.spec|sed "s/~/-/"`"
+  ln -s src openbao-rpm-$VERSION
+  tar czhf openbao-rpm-$VERSION.tar.gz --exclude ".git*" openbao-rpm-$VERSION/
+  mv openbao-rpm-$VERSION.tar.gz src
+  cd src
+  ./make-source-tarball
+  # eliminate the "dist" part in the rpm name, for the release assets
+  rpmbuild -D "dist %{nil}" -D "_topdir $PWD" -D "_sourcedir $PWD" -D "_srcrpmdir $PWD" -D "_rpmdir $PWD" -ba openbao.spec
+  mv $(arch)/* .
+  sudo rpm -i openbao-*$VERSION-*.$(arch).rpm
+  bao version
+'
