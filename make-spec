@@ -1,0 +1,38 @@
+#!/bin/bash
+
+ORG=openbao
+PKG=openbao
+if [ ! -f $PKG.spec.in ]; then
+    echo "$PKG.spec.in doesn't exist!" >&2
+    exit 1
+fi
+# Check if someone accidentally modified openbao.spec. This is tricky
+# because git does not keep track of whether not a file is readonly.
+# This script generates it read-only, so if it isn't writable then it
+# is OK.  Otherwise if it is more than 2 seconds newer than the .in 
+# most likely it was edited after git checkout.
+if [ -w openbao.spec ]; then
+    INTIME="`stat -c '%Y' $PKG.spec.in`"
+    OUTTIME="`stat -c '%Y' $PKG.spec`"
+    if (( $OUTTIME >= $INTIME + 2 )); then
+        echo "$PKG.spec is newer than $PKG.spec.in -- was it accidentally edited?" >&2
+        exit 2
+    fi
+fi
+VERSION="`sed -n 's/^Version:[ \t]*//p' $PKG.spec.in|sed 's/~/-/'`"
+GOMOD=/tmp/go.mod.$$
+trap "rm -f $GOMOD" 0
+URL="https://raw.githubusercontent.com/$ORG/$PKG/refs/tags/v$VERSION/go.mod"
+if ! curl -o $GOMOD -sSL -f -m 15 $URL; then
+    echo "Couldn't download $GOMOD" >&2
+    exit 3
+fi
+rm -f openbao.spec
+while IFS='' read -r LINE; do
+    if [[ "$LINE" = *"bundled provides" ]]; then
+        awk '{if (index($1, "/") != 0 && ($1 != "//")) {print "Provides: bundled(golang("$1")) = "$2}}' $GOMOD | sed -e 's/-/_/g' | sort | uniq
+    else
+        echo "$LINE"
+    fi
+done <$PKG.spec.in >$PKG.spec
+chmod 444 $PKG.spec

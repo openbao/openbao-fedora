@@ -1,0 +1,25 @@
+.TH bao 1
+.SH NAME
+bao \- securely access secrets
+
+.SH SYNOPSIS
+.B bao
+<command> [args]
+
+.SH DESCRIPTION
+.B bao
+is the command line tool to communicate with an OpenBao service,
+a powerful service for securely accessing secrets. 
+Use the
+.B "bao help"
+command to see details of its operation.
+
+.SH "ENVIRONMENT"
+The following environment variable is required to communicate with the
+OpenBao service:
+.TP
+.B "BAO_ADDR"
+URL to contact the bao service, for example
+.BR http://localhost:8200 .
+An equivalent for backward compatibility to Hashicorp Vault is
+.BR "VAULT_ADDR" .
