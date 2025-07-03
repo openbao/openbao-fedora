@@ -13,9 +13,9 @@ Summary: A tool for securely accessing secrets
 # See LICENSE for primary license
 # See LICENSE_DEPENDENCIES.md for bundled dependencies
 License: MPL-2.0
-Source0: https://github.com/opensciencegrid/%{name}-rpm/archive/v%{package_version}/%{name}-rpm-%{package_version}.tar.gz
+Source0: https://github.com/DrDaveD/%{name}-rpm/archive/v%{package_version}/%{name}-rpm-%{package_version}.tar.gz
 # This is created by ./make-source-tarball and included in release assets
-Source1: https://github.com/opensciencegrid/%{name}-rpm/releases/download/v%{package_version}/%{name}-src-%{package_version}.tar.gz
+Source1: https://github.com/DrDaveD/%{name}-rpm/releases/download/v%{package_version}/%{name}-src-%{package_version}.tar.gz
 
 BuildRequires: golang
 Requires(post): systemd
