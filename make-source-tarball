@@ -2,7 +2,7 @@
 
 # use $TMPDIR as temporary space for improved performance
 
-REQUIRED="git gpg make python3 g++ find tar"
+REQUIRED="git gpg make python3 g++ go find tar"
 NODEVERSION=22.5.1
 YARNVERSION=1.22.22
 
@@ -88,6 +88,7 @@ cd $PKG-$VERSION
 make bootstrap
 make static-dist
 make prep
+go run github.com/google/go-licenses@v1.6.0 report ./... --ignore github.com/$ORG/$PKG --template $HERE/LICENSE_DEPENDENCIES.tpl > LICENSE_DEPENDENCIES.md
 popd
 
 rm -rf $NODEJS_HOME $YARN_HOME
@@ -97,5 +98,6 @@ rm -f $GOPATH/bin/*
 pushd $GOSRC
 ./clean.bash
 popd
+
 tar --exclude .git -czf $HERE/$BASE.tar.gz $BASE
 rm -rf $BASE

@@ -1,0 +1,30 @@
+name: ci
+on:
+  pull_request:
+
+jobs:
+  verify-spec:
+    name: verify-spec
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Re-make spec
+        run: ./make-spec
+
+      - name: Make sure it was up to date
+        run: git diff --exit-code -- openbao.spec
+
+  rpmbuild-rocky8:
+    name: rpmbuild-rocky8
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      # fetch tags as checkout@v2 doesn't do that by default
+      - run: git fetch --prune --unshallow --tags --force
+
+      - name: Build rpm under docker
+        env:
+          OS_TYPE: rockylinux
+          OS_VERSION: 8
+        run: ./ci/docker-run

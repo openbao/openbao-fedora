@@ -1,0 +1,26 @@
+#!/bin/bash
+# Run docker privileged as described at
+#  https://djw8605.github.io/2016/05/03/building-centos-packages-on-travisci/
+
+DOCKER_HUB_URI="$OS_TYPE:$OS_VERSION"
+docker pull "$DOCKER_HUB_URI"
+
+DOCKER_CONTAINER_NAME="test_${OS_TYPE##*/}_${OS_VERSION//./_}"
+
+set -x
+
+# start the container running systemd
+docker run --privileged -d --network=host -v "$(pwd):/build/src:rw" \
+  --name "$DOCKER_CONTAINER_NAME" "$DOCKER_HUB_URI" /usr/sbin/init
+RET=$?
+if [ "$RET" = 0 ]; then
+    docker exec "$DOCKER_CONTAINER_NAME" /bin/bash -exc \
+    	"cd /build && src/ci/rpm-build"
+    RET=$?
+fi
+
+docker ps -a
+docker stop "$DOCKER_CONTAINER_NAME"
+docker rm -v "$DOCKER_CONTAINER_NAME"
+
+exit $RET

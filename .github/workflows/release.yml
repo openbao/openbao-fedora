@@ -1,0 +1,45 @@
+name: release
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  release_assets:
+    name: release_assets
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - uses: actions/checkout@v2
+      - run: git fetch --prune --unshallow --tags --force
+
+      - name: Check if release is needed because tag is latest
+        env:
+          GITHUB_REF: ${{github.ref}}
+        run: |
+          LATESTTAG="$(git tag --sort=v:refname|tail -1)"
+          GITTAG="${GITHUB_REF#refs/tags/v*}"
+          if [ "$LATESTTAG" == v"$GITTAG" ]
+          then
+            echo "do_release=true" >> $GITHUB_ENV
+          else
+            echo "Skipping because $LATESTTAG did not match v$GITTAG"
+          fi
+
+      - name: Make source tarball and src rpm package
+        if: env.do_release
+        env:
+          OS_TYPE: rockylinux
+          OS_VERSION: 8
+        run: |
+          set -x
+          ./ci/docker-run
+
+      - name: Release
+        if: env.do_release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            *-src-*.tar.gz
+            *.src.rpm
