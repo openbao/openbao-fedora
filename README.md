@@ -1,3 +1,3 @@
 # openbao-rpm
 
-RPM packaging for openbao that is upward compatible from vault RPM packaging
+RPM packaging for openbao including a vault compatability subpackage.
