@@ -1,6 +1,8 @@
 #!/bin/bash
 # Run docker privileged as described at
 #  https://djw8605.github.io/2016/05/03/building-centos-packages-on-travisci/
+# Don't add a cgroup volume as described there because of
+#  https://serverfault.com/questions/1053187/systemd-fails-to-run-in-a-docker-container-when-using-cgroupv2-cgroupns-priva
 
 DOCKER_HUB_URI="$OS_TYPE:$OS_VERSION"
 docker pull "$DOCKER_HUB_URI"
@@ -10,9 +12,12 @@ DOCKER_CONTAINER_NAME="test_${OS_TYPE##*/}_${OS_VERSION//./_}"
 set -x
 
 # start the container running systemd
-docker run --privileged -d --network=host -v "$(pwd):/build/src:rw" \
+docker run --privileged -d -it -v "$(pwd):/build/src:rw" \
   --name "$DOCKER_CONTAINER_NAME" "$DOCKER_HUB_URI" /usr/sbin/init
 RET=$?
+# leave some time for systemd network setup and interesting logs
+sleep 10
+docker logs $DOCKER_CONTAINER_NAME
 if [ "$RET" = 0 ]; then
     docker exec "$DOCKER_CONTAINER_NAME" /bin/bash -exc \
     	"cd /build && src/ci/rpm-build"
