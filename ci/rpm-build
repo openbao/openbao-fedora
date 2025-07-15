@@ -5,6 +5,10 @@
 
 dnf -y install git gpg make python3 gcc-c++ findutils golang
 dnf install -y rpm-build
+if [[ "$OS_TYPE" = rocky* ]] || [[ "$OS_TYPE" = alma* ]]; then
+    dnf install -y epel-release
+    dnf install -y epel-rpm-macros
+fi
 
 # switch to an unprivileged user
 useradd -u 1000 --create-home -s /bin/bash testuser
