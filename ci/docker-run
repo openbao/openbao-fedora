@@ -12,7 +12,7 @@ DOCKER_CONTAINER_NAME="test_${OS_TYPE##*/}_${OS_VERSION//./_}"
 set -x
 
 # start the container running systemd
-docker run --privileged -d -it -v "$(pwd):/build/src:rw" \
+docker run --privileged -d -it -v "$(pwd):/build/src:rw" -e OS_TYPE=$OS_TYPE \
   --name "$DOCKER_CONTAINER_NAME" "$DOCKER_HUB_URI" /usr/sbin/init
 RET=$?
 # leave some time for systemd network setup and interesting logs

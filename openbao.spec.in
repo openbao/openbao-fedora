@@ -8,7 +8,7 @@
 
 Name: openbao
 Version: 2.3.1
-Release: 1%{?dist}
+Release: %autorelease
 Summary: A tool for securely accessing secrets
 # See LICENSE for primary license
 # See LICENSE_DEPENDENCIES.md for bundled dependencies
@@ -22,10 +22,6 @@ BuildRequires: systemd-rpm-macros
 URL: https://openbao.org
 
 # This line gets replaced by bundled provides
-
-# This is to avoid
-#   *** ERROR: No build ID note found
-%global debug_package %{nil}
 
 %description
 Openbao secures, stores, and tightly controls access to tokens, passwords,
@@ -65,12 +61,26 @@ touch http/web_ui/index.html
 #  which fails because there's no git info
 ln -s /bin/true $GOPATH/bin/git
 
+uname_m=$(uname -m)
+if [ "$uname_m" = ppc64le ]; then
+    GO_BUILD_MODE="-buildmode default"
+else
+    GO_BUILD_MODE="-buildmode pie"
+fi
 GO_BUILD_GCFLAGS=
 GO_BUILD_LDFLAGS="-X github.com/%{name}/%{name}/version.fullVersion=%{version}-%{release}"
 GO_BUILD_LDFLAGS+=" -X github.com/%{name}/%{name}/version.GitCommit="
 BUILD_DATE="$(date --utc +%Y-%m-%dT%H:%M:%SZ)"
 GO_BUILD_LDFLAGS+=" -X github.com/%{name}/%{name}/version.BuildDate=${BUILD_DATE}"
+GO_BUILD_LDFLAGS+=" -B gobuildid"
 GO_BUILD_TAGS="ui"
+
+# These are from the %%gobuild macro which we can't use because it doesn't
+# allow for extra tags (nor extra gcflags for debug mode).
+GO_BUILD_TAGS+=" rpm_crashtraceback libtrust_openssl"
+GO_BUILD_LDFLAGS+=" -linkmode=external -compressdwarf=false"
+GO_BUILD_LDFLAGS+=" -extldflags '%__global_ldflags'"
+
 %if "%{?go_debug}" != ""
 # add debugging & testing flags
 GO_BUILD_GCFLAGS="all=-N -l"
@@ -81,14 +91,13 @@ GO_BUILD_TAGS+=" testonly"
 
 # instructions from https://openbao.org/docs/contributing/packaging/#ui-release
 # The ui release is already pre-built in the source tarball
-go build -gcflags "${GO_BUILD_GCFLAGS}" -ldflags "${GO_BUILD_LDFLAGS}" -buildvcs=false -o bin/bao -tags "${GO_BUILD_TAGS}"
+go build ${GO_BUILD_MODE} -gcflags "${GO_BUILD_GCFLAGS}" -ldflags "${GO_BUILD_LDFLAGS}" -buildvcs=false -o bin/bao -tags "${GO_BUILD_TAGS}"
 
 
 %install
 # starts out in %%{name}-src-%%{package_version} directory
 mkdir -p %{buildroot}%{_bindir}/
 cp -p %{name}-%{package_version}/bin/bao %{buildroot}%{_bindir}/
-strip %{buildroot}%{_bindir}/bao
 ln -s bao %{buildroot}%{_bindir}/%{oldname}
 
 cp %{name}-%{package_version}/LICENSE* .
@@ -253,88 +262,4 @@ fi
 %endif
 
 %changelog
-* Tue Jul  8 2025 Dave Dykstra <dwd@fnal.gov> 2.3.1-1
-- In preparation for moving to EPEL and Fedora, split vault compatibility
-  out into a separate openbao-vault-compat subpackage.
-  As a result the new package has some incompatibilities and so is not a
-  complete drop-in replacement: it uses an openbao user id and group
-  instead of vault and the default configuration file is called openbao.hcl
-  instead of vault.hcl.
-
-* Mon Apr  7 2025 Dave Dykstra <dwd@fnal.gov> 2.2.0-2
-- Update to use official build instructions, including showing the correct
-  version number in the `bao status` command and not using the testonly
-  build tag unless the go_debug macro is enabled.
-
-* Thu Mar  6 2025 Dave Dykstra <dwd@fnal.gov> 2.2.0-1
-- Convert to use openbao instead of vault.
-- Include required go version in source tarball again.
-
-* Tue Aug 20 2024 Dave Dykstra <dwd@fnal.gov> 1.17.2-2
-- Stop including go in the source tarball, instead assume the build pulls
-  in a new enough version of golang.
-
-* Mon Jul 22 2024 Dave Dykstra <dwd@fnal.gov> 1.17.2-1
-- Update to upstream 1.17.2
-- Add a temporary wrapper script on the vault command to avoid an irrelevant
-  warning issued by the gosnowflake dependency when DBUS_SESSION_BUS_ADDRESS
-  is not set
-
-* Thu Jan  4 2024 Dave Dykstra <dwd@fnal.gov> 1.15.4-1
-- Update to upstream 1.15.4
-
-* Tue May  2 2023 Dave Dykstra <dwd@fnal.gov> 1.13.2-1
-- Update to upstream 1.13.2
-
-* Tue Apr 11 2023 Dave Dykstra <dwd@fnal.gov> 1.13.1-1
-- Update to upstream 1.13.1
-
-* Thu Nov 10 2022 Dave Dykstra <dwd@fnal.gov> 1.12.1-1
-- Update to upstream 1.12.1
-
-* Thu Jul 28 2022 Dave Dykstra <dwd@fnal.gov> 1.11.1-1
-- Update to upstream 1.11.1, which includes a fix to avoid denial of
-  service on HA installation.
-- Remove $GOPATH/mod/*.* from the source tarball, leaving just
-  $GOPATH/mod/cache/download.  That saves about 300M while still
-  allowing offline builds.
-
-* Wed Mar 23 2022 Dave Dykstra <dwd@fnal.gov> 1.10.0-1
-- Update to upstream 1.10.0
-
-* Tue Feb 15 2022 Dave Dykstra <dwd@fnal.gov> 1.9.3-1
-- Update to upstream 1.9.3
-
-* Wed Dec  1 2021 Dave Dykstra <dwd@fnal.gov> 1.9.0-1
-- Update to upstream 1.9.0
-
-* Thu Nov  4 2021 Dave Dykstra <dwd@fnal.gov> 1.8.4-1
-- Update to upstream 1.8.4
-
-* Fri Aug 27 2021 Dave Dykstra <dwd@fnal.gov> 1.8.2-1
-- Update to upstream 1.8.2
-
-* Thu Aug  5 2021 Dave Dykstra <dwd@fnal.gov> 1.8.1-1
-- Update to upstream 1.8.1
-
-* Wed Aug  4 2021 Dave Dykstra <dwd@fnal.gov> 1.8.0-1
-- Update to upstream 1.8.0
-
-* Thu Jun 17 2021 Dave Dykstra <dwd@fnal.gov> 1.7.3-1
-- Update to upstream 1.7.3
-
-* Thu May 20 2021 Dave Dykstra <dwd@fnal.gov> 1.7.2-1
-- Update to upstream 1.7.2, a security release.
-
-* Wed Apr 21 2021 Dave Dykstra <dwd@fnal.gov> 1.7.1-1
-- Update to upstream 1.7.1.  Add patch for el7 to allow go 1.15.5.
-- Stop disabling vault service on upgrade.
-
-* Wed Mar 31 2021 Dave Dykstra <dwd@fnal.gov> 1.7.0-2
-- Add %verify(not caps) to the vault binary to make rpm -V happy
-
-* Thu Mar 25 2021 Dave Dykstra <dwd@fnal.gov> 1.7.0-1
-- Update to upstream 1.7.0
-
-* Wed Feb 17 2021 Dave Dykstra <dwd@fnal.gov> 1.6.2-1
-- Initial build
+%autochangelog
