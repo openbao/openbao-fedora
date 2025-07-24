@@ -4,6 +4,8 @@
 # For example, it should have a dash instead of tilde for release candidates.
 %global package_version 2.3.1
 
+%global go_version 1.24.4
+
 %global oldname vault
 
 Name: openbao
@@ -15,7 +17,8 @@ Summary: A tool for securely accessing secrets
 License: MPL-2.0
 Source0: https://github.com/opensciencegrid/%{name}-rpm/releases/download/v%{package_version}/%{name}-rpm-%{package_version}.tar.gz
 # This is created by ./make-source-tarball and included in release assets
-Source1: https://github.com/opensciencegrid/%{name}-rpm/releases/download/v%{package_version}/%{name}-src-%{package_version}.tar.gz
+Source1: https://github.com/opensciencegrid/%{name}-rpm/releases/download/v%{package_version}/%{name}-src-%{package_version}.tar.xz
+Source2: https://golang.org/dl/go%{go_version}.src.tar.gz
 
 BuildRequires: golang
 BuildRequires: systemd-rpm-macros
@@ -395,6 +398,8 @@ Vault package.
 %setup -q -n %{name}-rpm-%{package_version}
 RPMDIR=`pwd`
 %setup -q -T -b 1 -n %{name}-src-%{package_version}
+# put go src inside the above dir
+%setup -q -D -T -a 2 -c -n %{name}-src-%{package_version}
 
 %build
 # starts out in %%{name}-src-%%{package_version} directory
@@ -407,9 +412,6 @@ export GOPROXY=file://$(go env GOMODCACHE)/cache/download
 cd %{name}-%{package_version}
 # this prevents it from complaining that ui assets are too old
 touch http/web_ui/index.html
-# this prevents the build from trying to use git to figure out the version
-#  which fails because there's no git info
-ln -s /bin/true $GOPATH/bin/git
 
 uname_m=$(uname -m)
 if [ "$uname_m" = ppc64le ]; then
@@ -440,7 +442,7 @@ GO_BUILD_TAGS+=" testonly"
 %endif
 
 # instructions from https://openbao.org/docs/contributing/packaging/#ui-release
-# The ui release is already pre-built in the source tarball
+# The ui is pre-prepared in the source distribution tarball
 go build ${GO_BUILD_MODE} -gcflags "${GO_BUILD_GCFLAGS}" -ldflags "${GO_BUILD_LDFLAGS}" -buildvcs=false -o bin/bao -tags "${GO_BUILD_TAGS}"
 
 

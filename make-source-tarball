@@ -33,7 +33,7 @@ HERE=$PWD
 rm -f $BASE-*.tar.gz
 cd ${TMPDIR:-/tmp}
 for OLDBASE in $BASE-*; do
-    if [ -d $OLDBASE/go ]; then
+    if [ -d $OLDBASE/gopath ]; then
 	# this is in case it wasn't fully created and chmodded
         PATH=$PWD/$OLDBASE/go/bin:$PATH GOPATH=$PWD/$OLDBASE/gopath go clean -modcache
     fi
@@ -85,9 +85,7 @@ PATH=$PWD/go/bin:$GOPATH/bin:$PATH
 go version
 
 cd $PKG-$VERSION
-make bootstrap
 make static-dist
-make prep
 go run github.com/google/go-licenses@v1.6.0 report ./... --ignore github.com/$ORG/$PKG --template $HERE/LICENSE_DEPENDENCIES.tpl > LICENSE_DEPENDENCIES.md
 popd
 
@@ -95,9 +93,7 @@ rm -rf $NODEJS_HOME $YARN_HOME
 find $GOPATH/pkg/mod -type d ! -perm -200 -print0|xargs -0 -r chmod u+w
 rm -rf $GOPATH/mod/*.*
 rm -f $GOPATH/bin/*
-pushd $GOSRC
-./clean.bash
-popd
+rm -rf $BASE/go
 
-tar --exclude .git -czf $HERE/$BASE.tar.gz $BASE
+tar --exclude .git -cJf $HERE/$BASE.tar.xz $BASE
 rm -rf $BASE
