@@ -17,7 +17,7 @@ Summary: A tool for securely accessing secrets
 License: MPL-2.0
 Source0: https://github.com/opensciencegrid/%{name}-rpm/releases/download/v%{package_version}/%{name}-rpm-%{package_version}.tar.gz
 # This is created by ./make-source-tarball and included in release assets
-Source1: https://github.com/opensciencegrid/%{name}-rpm/releases/download/v%{package_version}/%{name}-src-%{package_version}.tar.xz
+Source1: https://github.com/DrDaveD/%{name}/releases/download/v%{package_version}/%{name}-dist-%{package_version}.tar.xz
 Source2: https://golang.org/dl/go%{go_version}.src.tar.gz
 
 BuildRequires: golang
@@ -397,19 +397,16 @@ Vault package.
 %prep
 %setup -q -n %{name}-rpm-%{package_version}
 RPMDIR=`pwd`
-%setup -q -T -b 1 -n %{name}-src-%{package_version}
+%setup -q -T -b 1 -n %{name}-dist-%{package_version}
 # put go src inside the above dir
-%setup -q -D -T -a 2 -c -n %{name}-src-%{package_version}
+%setup -q -D -T -a 2 -c -n %{name}-dist-%{package_version}
 
 %build
-# starts out in %%{name}-src-%%{package_version} directory
+# starts out in %%{name}-dist-%%{package_version} directory
 cd go/src
 ./make.bash
 cd ../..
-export GOPATH="`pwd`/gopath"
-export PATH=$PWD/go/bin:$GOPATH/bin:$PATH
-export GOPROXY=file://$(go env GOMODCACHE)/cache/download
-cd %{name}-%{package_version}
+export PATH=$PWD/go/bin:$PATH
 # this prevents it from complaining that ui assets are too old
 touch http/web_ui/index.html
 
@@ -447,14 +444,10 @@ go build ${GO_BUILD_MODE} -gcflags "${GO_BUILD_GCFLAGS}" -ldflags "${GO_BUILD_LD
 
 
 %install
-# starts out in %%{name}-src-%%{package_version} directory
+# starts out in %%{name}-dist-%%{package_version} directory
 mkdir -p %{buildroot}%{_bindir}/
-cp -p %{name}-%{package_version}/bin/bao %{buildroot}%{_bindir}/
+cp -p bin/bao %{buildroot}%{_bindir}/
 ln -s bao %{buildroot}%{_bindir}/%{oldname}
-
-cp %{name}-%{package_version}/LICENSE* .
-cp %{name}-%{package_version}/README.md .
-cp %{name}-%{package_version}/CHANGELOG.md .
 
 cd ../%{name}-rpm-%{package_version}
 mkdir -p %{buildroot}%{_sysconfdir}/%{name}.d/tls
