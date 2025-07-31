@@ -31,6 +31,10 @@ rm -f openbao.spec
 while IFS='' read -r LINE; do
     if [[ "$LINE" = *"bundled provides" ]]; then
         awk '{if (index($1, "/") != 0 && ($1 != "//")) {print "Provides: bundled(golang("$1")) = "$2}}' $GOMOD | sed -e 's/-/_/g' | sort | uniq
+    elif [[ "$LINE" = *"@GOVERSION@"* ]]; then
+        URL="https://raw.githubusercontent.com/$ORG/$PKG/refs/tags/v$VERSION/.go-version"
+        GOVERSION="`curl -sSL -f -m 15 $URL`"
+        echo "$LINE" | sed "s/@GOVERSION@/$GOVERSION/"
     else
         echo "$LINE"
     fi
