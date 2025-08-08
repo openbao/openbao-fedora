@@ -2,22 +2,21 @@
 
 # This macro can be slightly different than %%{version}.
 # For example, it should have a dash instead of tilde for release candidates.
-%global package_version 2.3.1
+%global package_version 2.3.2
 
 %global go_version @GOVERSION@
 
 %global oldname vault
 
 Name: openbao
-Version: 2.3.1
+Version: 2.3.2
 Release: %autorelease
 Summary: A tool for securely accessing secrets
 # See LICENSE for primary license
 # See LICENSE_DEPENDENCIES.md for bundled dependencies
 License: MPL-2.0
 Source0: https://github.com/opensciencegrid/%{name}-rpm/releases/download/v%{package_version}/%{name}-rpm-%{package_version}.tar.gz
-# This is created by ./make-source-tarball and included in release assets
-Source1: https://github.com/DrDaveD/%{name}/releases/download/v%{package_version}/%{name}-dist-%{package_version}.tar.xz
+Source1: https://github.com/openbao/%{name}/releases/download/v%{package_version}/%{name}-dist-%{package_version}.tar.xz
 Source2: https://golang.org/dl/go%{go_version}.src.tar.gz
 
 BuildRequires: golang
