@@ -3,7 +3,7 @@
 
 # install dependencies
 
-dnf -y install git gpg make python3 gcc-c++ findutils golang wget
+dnf -y install git gpg golang wget
 dnf install -y rpm-build
 if [[ "$OS_TYPE" = rocky* ]] || [[ "$OS_TYPE" = alma* ]]; then
     dnf install -y epel-release
@@ -27,7 +27,9 @@ su testuser -c '
   wget "$DISTURL"
   GOVERSION="`sed -n "s/%global go_version //p" openbao.spec`"
   GOURL="`sed -n "s/^Source2: //p" openbao.spec|sed "s/%{go_version}/$GOVERSION/"`"
-  wget "$GOURL"
+  if [ -n "$GOURL" ]; then
+    wget "$GOURL"
+  fi
   # eliminate the "dist" part in the rpm name, for the release assets
   rpmbuild -D "dist %{nil}" -D "_topdir $PWD" -D "_sourcedir $PWD" -D "_srcrpmdir $PWD" -D "_rpmdir $PWD" -ba openbao.spec
   mv $(arch)/* .

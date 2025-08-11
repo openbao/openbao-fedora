@@ -4,7 +4,7 @@
 # For example, it should have a dash instead of tilde for release candidates.
 %global package_version 2.3.2
 
-%global go_version 1.24.6
+%global go_version 1.24.4
 
 %global oldname vault
 
@@ -17,11 +17,17 @@ Summary: A tool for securely accessing secrets
 License: MPL-2.0
 Source0: https://github.com/opensciencegrid/%{name}-rpm/releases/download/v%{package_version}/%{name}-rpm-%{package_version}.tar.gz
 Source1: https://github.com/openbao/%{name}/releases/download/v%{package_version}/%{name}-dist-%{package_version}.tar.xz
-Source2: https://golang.org/dl/go%{go_version}.src.tar.gz
+Patch0: goversion.patch
 
 BuildRequires: golang
 BuildRequires: systemd-rpm-macros
 URL: https://openbao.org
+
+%if "%{?osg}" != ""
+Provides: %{name}-%{oldname}-compat = %{version}-%{release}
+Provides: %{oldname} = %{version}-%{release}
+Obsoletes: %{oldname} < 2.0
+%endif
 
 Provides: bundled(golang(cel.dev/expr)) = v0.24.0
 Provides: bundled(golang(cloud.google.com/go)) = v0.116.0
@@ -383,6 +389,7 @@ can access an encrypted Key/Value store and network encryption-as-a-service, or
 generate AWS IAM/STS credentials, SQL/NoSQL databases, X.509 certificates, SSH
 credentials, and more.
 
+%if "%{?osg}" == ""
 %package %{oldname}-compat
 Summary: Vault-compatible command and service
 Requires: %{name} = %{version}-%{release}
@@ -392,29 +399,22 @@ Obsoletes: %{oldname} < 2.0
 %description %{oldname}-compat
 Provides a compatibility layer on top of OpenBao to emulate a Hashicorp
 Vault package.
+%endif
 
 %prep
 %setup -q -n %{name}-rpm-%{package_version}
-RPMDIR=`pwd`
+RPMDIR=$(pwd)
 %setup -q -T -b 1 -n %{name}-dist-%{package_version}
-# put go src inside the above dir
-%setup -q -D -T -a 2 -c -n %{name}-dist-%{package_version}
+%autopatch
 
 %build
 # starts out in %%{name}-dist-%%{package_version} directory
-cd go/src
-./make.bash
-cd ../..
-export PATH=$PWD/go/bin:$PATH
+
 # this prevents it from complaining that ui assets are too old
 touch http/web_ui/index.html
 
 uname_m=$(uname -m)
-if [ "$uname_m" = ppc64le ]; then
-    GO_BUILD_MODE="-buildmode default"
-else
-    GO_BUILD_MODE="-buildmode pie"
-fi
+GO_BUILD_MODE="-buildmode pie"
 GO_BUILD_GCFLAGS=
 GO_BUILD_LDFLAGS="-X github.com/%{name}/%{name}/version.fullVersion=%{version}-%{release}"
 GO_BUILD_LDFLAGS+=" -X github.com/%{name}/%{name}/version.GitCommit="
@@ -485,7 +485,9 @@ cp %{name}.conf %{buildroot}%{_sysusersdir}/%{name}.conf
 %doc README.md
 %doc CHANGELOG.md
 
+%if "%{?osg}" == ""
 %files %{oldname}-compat
+%endif
 %{_bindir}/%{oldname}
 %{_sysconfdir}/%{oldname}.d
 %{_sharedstatedir}/%{oldname}

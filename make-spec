@@ -12,14 +12,14 @@ fi
 # is OK.  Otherwise if it is more than 2 seconds newer than the .in 
 # most likely it was edited after git checkout.
 if [ -w openbao.spec ]; then
-    INTIME="`stat -c '%Y' $PKG.spec.in`"
-    OUTTIME="`stat -c '%Y' $PKG.spec`"
+    INTIME="$(stat -c '%Y' $PKG.spec.in)"
+    OUTTIME="$(stat -c '%Y' $PKG.spec)"
     if (( $OUTTIME >= $INTIME + 2 )); then
         echo "$PKG.spec is newer than $PKG.spec.in -- was it accidentally edited?" >&2
         exit 2
     fi
 fi
-VERSION="`sed -n 's/^Version:[ \t]*//p' $PKG.spec.in|sed 's/~/-/'`"
+VERSION="$(sed -n 's/^Version:[ \t]*//p' $PKG.spec.in|sed 's/~/-/')"
 GOMOD=/tmp/go.mod.$$
 trap "rm -f $GOMOD" 0
 URL="https://raw.githubusercontent.com/$ORG/$PKG/refs/tags/v$VERSION/go.mod"
@@ -32,8 +32,12 @@ while IFS='' read -r LINE; do
     if [[ "$LINE" = *"bundled provides" ]]; then
         awk '{if (index($1, "/") != 0 && ($1 != "//")) {print "Provides: bundled(golang("$1")) = "$2}}' $GOMOD | sed -e 's/-/_/g' | sort | uniq
     elif [[ "$LINE" = *"@GOVERSION@"* ]]; then
-        URL="https://raw.githubusercontent.com/$ORG/$PKG/refs/tags/v$VERSION/.go-version"
-        GOVERSION="`curl -sSL -f -m 15 $URL`"
+        if [ -f goversion.patch ]; then
+            GOVERSION="$(sed -n 's/^\+go //p' goversion.patch)"
+        else
+            URL="https://raw.githubusercontent.com/$ORG/$PKG/refs/tags/v$VERSION/.go-version"
+            GOVERSION="$(curl -sSL -f -m 15 $URL)"
+        fi
         echo "$LINE" | sed "s/@GOVERSION@/$GOVERSION/"
     else
         echo "$LINE"
