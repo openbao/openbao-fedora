@@ -10,7 +10,7 @@
 
 Name: openbao
 Version: 2.3.2
-Release: 2
+Release: 2%{?dist}
 Summary: A tool for securely accessing secrets
 # See LICENSE for primary license
 # See LICENSE_DEPENDENCIES.md for bundled dependencies
