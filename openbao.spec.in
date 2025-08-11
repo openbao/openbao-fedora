@@ -23,12 +23,6 @@ BuildRequires: golang
 BuildRequires: systemd-rpm-macros
 URL: https://openbao.org
 
-%if "%{?osg}" != ""
-Provides: %{name}-%{oldname}-compat = %{version}-%{release}
-Provides: %{oldname} = %{version}-%{release}
-Obsoletes: %{oldname} < 2.0
-%endif
-
 # This line gets replaced by bundled provides
 
 %description
@@ -39,7 +33,6 @@ can access an encrypted Key/Value store and network encryption-as-a-service, or
 generate AWS IAM/STS credentials, SQL/NoSQL databases, X.509 certificates, SSH
 credentials, and more.
 
-%if "%{?osg}" == ""
 %package %{oldname}-compat
 Summary: Vault-compatible command and service
 Requires: %{name} = %{version}-%{release}
@@ -49,7 +42,6 @@ Obsoletes: %{oldname} < 2.0
 %description %{oldname}-compat
 Provides a compatibility layer on top of OpenBao to emulate a Hashicorp
 Vault package.
-%endif
 
 %prep
 %setup -q -n %{name}-rpm-%{package_version}
@@ -91,7 +83,6 @@ GO_BUILD_TAGS+=" testonly"
 # The ui is pre-prepared in the source distribution tarball
 go build ${GO_BUILD_MODE} -gcflags "${GO_BUILD_GCFLAGS}" -ldflags "${GO_BUILD_LDFLAGS}" -buildvcs=false -o bin/bao -tags "${GO_BUILD_TAGS}"
 
-
 %install
 # starts out in %%{name}-dist-%%{package_version} directory
 mkdir -p %{buildroot}%{_bindir}/
@@ -123,10 +114,6 @@ cp %{name}.conf %{buildroot}%{_sysusersdir}/%{name}.conf
 %attr(0700,%{name},%{name}) %dir %{_sysconfdir}/%{name}.d/tls
 %config(noreplace) %{_sysconfdir}/%{name}.d/%{name}.hcl
 %attr(0700,%{name},%{name}) %dir %{_sharedstatedir}/%{name}
-%if "%{?osg}" != ""
-%ghost %attr(0644,root,root) %{_sysconfdir}/%{oldname}.d.rpmmoved
-%ghost %attr(0644,root,root) %{_sharedstatedir}/%{oldname}.rpmmoved
-%endif
 %{_unitdir}/%{name}.service
 %{_sysusersdir}/%{name}.conf
 %{_datadir}/man/man1/bao.1.gz
@@ -135,58 +122,12 @@ cp %{name}.conf %{buildroot}%{_sysusersdir}/%{name}.conf
 %doc README.md
 %doc CHANGELOG.md
 
-%if "%{?osg}" == ""
 %files %{oldname}-compat
-%endif
 %{_bindir}/%{oldname}
 %{_sysconfdir}/%{oldname}.d
 %{_sharedstatedir}/%{oldname}
 %{_datadir}/man/man1/%{oldname}.1.gz
 %{_unitdir}/%{oldname}.service
-
-%if "%{?osg}" != ""
-# Older versions of this package had opposite symlinks for vault compatibility,
-#   and rpm needs help to handle that.
-# See https://fedoraproject.org/wiki/Packaging:Directory_Replacement
-
-%pretrans -p <lua>
-path = "%{_sysconfdir}/%{name}.d"
-st = posix.stat(path)
-if st and st.type == "link" then
-  os.remove(path)
-end
-path = "%{_sharedstatedir}/%{name}"
-st = posix.stat(path)
-if st and st.type == "link" then
-  os.remove(path)
-end
-path = "%{_sysconfdir}/%{oldname}.d"
-st = posix.stat(path)
-if st and st.type == "directory" then
-  status = os.rename(path, path .. ".rpmmoved")
-  if not status then
-    suffix = 0
-    while not status do
-      suffix = suffix + 1
-      status = os.rename(path .. ".rpmmoved", path .. ".rpmmoved." .. suffix)
-    end
-    os.rename(path, path .. ".rpmmoved")
-  end
-end
-path = "%{_sharedstatedir}/%{oldname}"
-st = posix.stat(path)
-if st and st.type == "directory" then
-  status = os.rename(path, path .. ".rpmmoved")
-  if not status then
-    suffix = 0
-    while not status do
-      suffix = suffix + 1
-      status = os.rename(path .. ".rpmmoved", path .. ".rpmmoved." .. suffix)
-    end
-    os.rename(path, path .. ".rpmmoved")
-  end
-end
-%endif
 
 %pre
 getent group %{name} > /dev/null || groupadd -r %{name}
@@ -194,68 +135,16 @@ getent passwd %{name} > /dev/null || \
     useradd -r -d %{_sharedstatedir}/%{name} -g %{name} \
     -s /sbin/nologin -c "%{name} secrets manager" %{name}
 
-%if "%{?osg}" != ""
-# When the package name changes the old package doesn't see the new one as
-# an upgrade and so it disables the service.  Keep track and re-enable
-# regardless of whether the scriptlet parameter says it is an install
-# or upgrade.
-%global wasenabledfile /var/run/.%{name}-was-enabled
-rm -f %{wasenabledfile}
-if systemctl -q is-enabled %{name} &>/dev/null; then
-    touch %{wasenabledfile}
-fi
-
-# If the service is running, stop it now and restart it after install
-%global wasrunningfile /var/run/.%{name}-was-running
-rm -f %{wasrunningfile}
-if systemctl -q is-active %{name} &>/dev/null; then
-    touch %{wasrunningfile}
-    systemctl stop %{name}
-fi
-%endif
-
 %post
 setcap cap_ipc_lock=+ep %{_bindir}/bao
 systemctl daemon-reload
 %systemd_post %{name}.service
-
-%if "%{?osg}" != ""
-# If the %%pretrans step above moved the sysconfdir to ".rpmmoved" then
-# the cleanup of the old hcl file will fail, so move it back.
-if [ -f %{_sysconfdir}/%{oldname}.d.rpmmoved/%{oldname}.hcl ]; then
-    if [ ! -L %{_sysconfdir}/%{oldname}.d ]; then
-        # compat package not (yet) installed so create the link
-        # it will be removed in %%posttrans if compat package is not installed
-        ln -s %{name}.d %{_sysconfdir}/%{oldname}.d
-    fi
-    mv %{_sysconfdir}/%{oldname}.d.rpmmoved/%{oldname}.hcl %{_sysconfdir}/%{oldname}.d/
-fi
-%endif
 
 %preun
 %systemd_preun %{name}.service
 
 %postun
 %systemd_postun_with_restart %{name}.service
-
-%if "%{?osg}" != ""
-%posttrans
-if [ -f "%{wasenabledfile}" ]; then
-    rm -f %{wasenabledfile}
-    if ! systemctl -q is-enabled %{name}; then
-        systemctl enable %{name}
-    fi
-fi
-if [ -f "%{wasrunningfile}" ]; then
-    rm -f %{wasrunningfile}
-    systemctl start %{name}
-fi
-
-if [ -L %{_sysconfdir}/%{oldname}.d ] && [ ! -L %{_sharedstatedir}/%{oldname} ]; then
-    # clean up the temporary symlink created in %%post
-    rm %{_sysconfdir}/%{oldname}.d
-fi
-%endif
 
 %changelog
 %autochangelog
