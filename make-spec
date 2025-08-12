@@ -32,22 +32,30 @@ while IFS='' read -r LINE; do
     if [[ "$LINE" = *"bundled provides" ]]; then
         awk '{if (index($1, "/") != 0 && ($1 != "//")) {print "Provides: bundled(golang("$1")) = "$2}}' $GOMOD | sed -e 's/-/_/g' | sort | uniq
     elif [[ "$LINE" = "License:"* ]]; then
-        DIST="$PKG-dist-$VERSION"
-        DISTBALL="$DIST.tar.xz"
+        DISTURL="$(sed -n "s/^Source1: //p" $PKG.spec.in|sed -e "s/%{name}/$PKG/g" -e "s/%{package_version}/$VERSION/g")"
+        DISTBALL="$(basename $DISTURL)"
+        DIST="$(echo $DISTBALL|sed 's/\.tar.*//')"
         if [ ! -f "$DISTBALL" ]; then
-            echo "$DISTBALL not found!" >&2
-            exit 4
+            curl -sLO "$DISTURL"
+            if [ ! -f "$DISTBALL" ]; then
+                echo "Couldn't download $DISTURL!" >&2
+                exit 4
+            fi
         fi
         LDEP=LICENSE_DEPENDENCIES.md
-        tar --xform "s,$DIST/,," -xf $DISTBALL $DIST/$LDEP
+        tar --xform "s/^$DIST/./" -xf $DISTBALL $DIST/$LDEP
         if [ ! -f $LDEP ]; then
             echo "$LDEP not found in $DISTBALL!" >&2
             exit 4
         fi
-        MAINLICENSE="$(echo $LINE|awk '{print $2}')"
-        LICENSES="$(echo $MAINLICENSE $(sed -n "s/^\*\*.*License:\*\* //p" openbao-dist-2.3.2/$LDEP|sort -u|grep -v "^$MAINLICENSE$")|sed 's/ / and /g')"
+        MAINLICENSE="$(echo $LINE|sed 's/^License: //')"
+        LICENSES="$(echo $(sed -n "s/^\*\*.*License:\*\* //p" $LDEP|sort -u|grep -v "^$MAINLICENSE$")|sed 's/ / and /g')"
+        if [ -z "$LICENSES" ]; then
+            echo "Didn't find any licenses in $LDEP!" >&2
+            exit 4
+        fi
         rm -f $LDEP
-        echo "License: $LICENSES"
+        echo "License: $MAINLICENSE and $LICENSES"
     elif [[ "$LINE" = *"@GOVERSION@"* ]]; then
         if [ -f goversion.patch ]; then
             GOVERSION="$(sed -n 's/^\+go //p' goversion.patch)"
