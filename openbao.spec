@@ -12,7 +12,7 @@ Release: %autorelease
 Summary: A tool for securely accessing secrets
 # See LICENSE for primary license
 # See LICENSE_DEPENDENCIES.md for bundled dependencies
-License: MPL-2.0 and AFL-2.0 and Apache-2.0 and BSD-2-Clause and BSD-3-Clause and CC0-1.0 and ISC and MIT
+License: MPL-2.0 AND AFL-2.0 AND Apache-2.0 AND BSD-2-Clause AND BSD-3-Clause AND CC0-1.0 AND ISC AND MIT
 Source0: https://github.com/opensciencegrid/%{name}-rpm/releases/download/v%{package_version}/%{name}-rpm-%{package_version}.tar.gz
 Source1: https://github.com/openbao/%{name}/releases/download/v%{package_version}/%{name}-dist-%{package_version}.tar.xz
 Patch0: goversion.patch
@@ -462,7 +462,6 @@ getent passwd %{name} > /dev/null || \
 
 %post
 setcap cap_ipc_lock=+ep %{_bindir}/bao
-systemctl daemon-reload
 %systemd_post %{name}.service
 
 %preun
