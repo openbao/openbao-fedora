@@ -49,13 +49,13 @@ while IFS='' read -r LINE; do
             exit 4
         fi
         MAINLICENSE="$(echo $LINE|sed 's/^License: //')"
-        LICENSES="$(echo $(sed -n "s/^\*\*.*License:\*\* //p" $LDEP|sort -u|grep -v "^$MAINLICENSE$")|sed 's/ / and /g')"
+        LICENSES="$(echo $(sed -n "s/^\*\*.*License:\*\* //p" $LDEP|sort -u|grep -v "^$MAINLICENSE$")|sed 's/ / AND /g')"
         if [ -z "$LICENSES" ]; then
             echo "Didn't find any licenses in $LDEP!" >&2
             exit 4
         fi
         rm -f $LDEP
-        echo "License: $MAINLICENSE and $LICENSES"
+        echo "License: $MAINLICENSE AND $LICENSES"
     elif [[ "$LINE" = *"@GOVERSION@"* ]]; then
         if [ -f goversion.patch ]; then
             GOVERSION="$(sed -n 's/^\+go //p' goversion.patch)"

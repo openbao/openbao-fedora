@@ -112,7 +112,6 @@ getent passwd %{name} > /dev/null || \
 
 %post
 setcap cap_ipc_lock=+ep %{_bindir}/bao
-systemctl daemon-reload
 %systemd_post %{name}.service
 
 %preun
