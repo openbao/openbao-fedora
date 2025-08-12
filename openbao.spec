@@ -4,8 +4,6 @@
 # For example, it should have a dash instead of tilde for release candidates.
 %global package_version 2.3.2
 
-%global go_version 1.24.4
-
 %global oldname vault
 
 Name: openbao
@@ -14,12 +12,12 @@ Release: %autorelease
 Summary: A tool for securely accessing secrets
 # See LICENSE for primary license
 # See LICENSE_DEPENDENCIES.md for bundled dependencies
-License: MPL-2.0
+License: MPL-2.0 and AFL-2.0 and Apache-2.0 and BSD-2-Clause and BSD-3-Clause and CC0-1.0 and ISC and MIT
 Source0: https://github.com/opensciencegrid/%{name}-rpm/releases/download/v%{package_version}/%{name}-rpm-%{package_version}.tar.gz
 Source1: https://github.com/openbao/%{name}/releases/download/v%{package_version}/%{name}-dist-%{package_version}.tar.xz
 Patch0: goversion.patch
 
-BuildRequires: golang
+BuildRequires: golang-bin
 BuildRequires: systemd-rpm-macros
 URL: https://openbao.org
 
@@ -395,7 +393,6 @@ Vault package.
 
 %prep
 %setup -q -n %{name}-rpm-%{package_version}
-RPMDIR=$(pwd)
 %setup -q -T -b 1 -n %{name}-dist-%{package_version}
 %autopatch
 
@@ -405,12 +402,11 @@ RPMDIR=$(pwd)
 # this prevents it from complaining that ui assets are too old
 touch http/web_ui/index.html
 
-uname_m=$(uname -m)
 GO_BUILD_MODE="-buildmode pie"
 GO_BUILD_GCFLAGS=
 GO_BUILD_LDFLAGS="-X github.com/%{name}/%{name}/version.fullVersion=%{version}-%{release}"
 GO_BUILD_LDFLAGS+=" -X github.com/%{name}/%{name}/version.GitCommit="
-BUILD_DATE="$(date --utc +%Y-%m-%dT%H:%M:%SZ)"
+BUILD_DATE="$(date -d "@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y-%m-%d)"
 GO_BUILD_LDFLAGS+=" -X github.com/%{name}/%{name}/version.BuildDate=${BUILD_DATE}"
 GO_BUILD_LDFLAGS+=" -B gobuildid"
 GO_BUILD_TAGS="ui"
@@ -458,6 +454,23 @@ ln -s %{name}.service %{buildroot}%{_unitdir}/%{oldname}.service
 mkdir -p %{buildroot}%{_sysusersdir}
 cp %{name}.conf %{buildroot}%{_sysusersdir}/%{name}.conf
 
+%pre
+getent group %{name} > /dev/null || groupadd -r %{name}
+getent passwd %{name} > /dev/null || \
+    useradd -r -d %{_sharedstatedir}/%{name} -g %{name} \
+    -s /sbin/nologin -c "%{name} secrets manager" %{name}
+
+%post
+setcap cap_ipc_lock=+ep %{_bindir}/bao
+systemctl daemon-reload
+%systemd_post %{name}.service
+
+%preun
+%systemd_preun %{name}.service
+
+%postun
+%systemd_postun_with_restart %{name}.service
+
 %files
 %verify(not caps) %{_bindir}/bao
 %dir %{_sysconfdir}/%{name}.d
@@ -478,23 +491,6 @@ cp %{name}.conf %{buildroot}%{_sysusersdir}/%{name}.conf
 %{_sharedstatedir}/%{oldname}
 %{_datadir}/man/man1/%{oldname}.1.gz
 %{_unitdir}/%{oldname}.service
-
-%pre
-getent group %{name} > /dev/null || groupadd -r %{name}
-getent passwd %{name} > /dev/null || \
-    useradd -r -d %{_sharedstatedir}/%{name} -g %{name} \
-    -s /sbin/nologin -c "%{name} secrets manager" %{name}
-
-%post
-setcap cap_ipc_lock=+ep %{_bindir}/bao
-systemctl daemon-reload
-%systemd_post %{name}.service
-
-%preun
-%systemd_preun %{name}.service
-
-%postun
-%systemd_postun_with_restart %{name}.service
 
 %changelog
 %autochangelog

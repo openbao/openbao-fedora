@@ -6,12 +6,12 @@ if [ ! -f $PKG.spec.in ]; then
     echo "$PKG.spec.in doesn't exist!" >&2
     exit 1
 fi
-# Check if someone accidentally modified openbao.spec. This is tricky
+# Check if someone accidentally modified $PKG.spec. This is tricky
 # because git does not keep track of whether not a file is readonly.
 # This script generates it read-only, so if it isn't writable then it
 # is OK.  Otherwise if it is more than 2 seconds newer than the .in 
 # most likely it was edited after git checkout.
-if [ -w openbao.spec ]; then
+if [ -w $PKG.spec ]; then
     INTIME="$(stat -c '%Y' $PKG.spec.in)"
     OUTTIME="$(stat -c '%Y' $PKG.spec)"
     if (( $OUTTIME >= $INTIME + 2 )); then
@@ -27,10 +27,27 @@ if ! curl -o $GOMOD -sSL -f -m 15 $URL; then
     echo "Couldn't download $GOMOD" >&2
     exit 3
 fi
-rm -f openbao.spec
+rm -f $PKG.spec
 while IFS='' read -r LINE; do
     if [[ "$LINE" = *"bundled provides" ]]; then
         awk '{if (index($1, "/") != 0 && ($1 != "//")) {print "Provides: bundled(golang("$1")) = "$2}}' $GOMOD | sed -e 's/-/_/g' | sort | uniq
+    elif [[ "$LINE" = "License:"* ]]; then
+        DIST="$PKG-dist-$VERSION"
+        DISTBALL="$DIST.tar.xz"
+        if [ ! -f "$DISTBALL" ]; then
+            echo "$DISTBALL not found!" >&2
+            exit 4
+        fi
+        LDEP=LICENSE_DEPENDENCIES.md
+        tar --xform "s,$DIST/,," -xf $DISTBALL $DIST/$LDEP
+        if [ ! -f $LDEP ]; then
+            echo "$LDEP not found in $DISTBALL!" >&2
+            exit 4
+        fi
+        MAINLICENSE="$(echo $LINE|awk '{print $2}')"
+        LICENSES="$(echo $MAINLICENSE $(sed -n "s/^\*\*.*License:\*\* //p" openbao-dist-2.3.2/$LDEP|sort -u|grep -v "^$MAINLICENSE$")|sed 's/ / and /g')"
+        rm -f $LDEP
+        echo "License: $LICENSES"
     elif [[ "$LINE" = *"@GOVERSION@"* ]]; then
         if [ -f goversion.patch ]; then
             GOVERSION="$(sed -n 's/^\+go //p' goversion.patch)"
