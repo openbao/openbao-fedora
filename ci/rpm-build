@@ -3,11 +3,19 @@
 
 # install dependencies
 
-dnf -y install git gpg golang wget
-dnf install -y rpm-build
-if [[ "$OS_TYPE" = rocky* ]] || [[ "$OS_TYPE" = alma* ]]; then
-    dnf install -y epel-release
+dnf -y install git gpg golang wget rpm-build
+. /etc/os-release
+OS_VERSION="${VERSION_ID%.*}"
+if [ "$OS_VERSION" -le 9 ]; then
+  dnf install -y epel-release
+  if [ "$OS_VERSION" == 8 ]; then
     dnf install -y epel-rpm-macros
+  else
+    dnf install -y rpmautospec-rpm-macros
+  fi
+fi
+if [ "$OS_VERSION" != 8 ]; then
+  dnf install -y go-rpm-macros
 fi
 
 # switch to an unprivileged user
@@ -23,7 +31,7 @@ su testuser -c '
   tar czhf openbao-rpm-$VERSION.tar.gz --exclude ".git*" openbao-rpm-$VERSION/
   mv openbao-rpm-$VERSION.tar.gz src
   cd src
-  DISTURL="`sed -n "s/^Source1: //p" openbao.spec|sed -e "s/%{name}/openbao/g" -e "s/%{package_version}/$VERSION/g"`"
+  DISTURL="`sed -n "s/^Source0: //p" openbao.spec|sed -e "s/%{name}/openbao/g" -e "s/%{package_version}/$VERSION/g"`"
   wget "$DISTURL"
   GOVERSION="`sed -n "s/%global go_version //p" openbao.spec`"
   GOURL="`sed -n "s/^Source2: //p" openbao.spec|sed "s/%{go_version}/$GOVERSION/"`"
