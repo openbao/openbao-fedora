@@ -12,13 +12,28 @@ Release: %autorelease
 Summary: A tool for securely accessing secrets
 # See LICENSE for primary license
 # See LICENSE_DEPENDENCIES.md for bundled dependencies
+# CC0-1.0 is normally not permissible for code in Fedora. Because the vendored Go package
+# github.com/zeebo/blake3 it applies to has been available in Fedora as golang-github-zeebo-blake3
+# since before the cutoff date 2022-08-01, the exception to use it also applies here.
 License: MPL-2.0 AND AFL-2.0 AND Apache-2.0 AND BSD-2-Clause AND BSD-3-Clause AND CC0-1.0 AND ISC AND MIT
-Source0: https://github.com/opensciencegrid/%{name}-rpm/releases/download/v%{package_version}/%{name}-rpm-%{package_version}.tar.gz
-Source1: https://github.com/openbao/%{name}/releases/download/v%{package_version}/%{name}-dist-%{package_version}.tar.xz
+Source0: https://github.com/openbao/%{name}/releases/download/v%{package_version}/%{name}-dist-%{package_version}.tar.xz
+# This includes extra files to include in the package and is used as a
+# single branch to track changes to them and a place where checks can be
+# automated using github actions.
+Source1: https://github.com/opensciencegrid/%{name}-rpm/releases/download/v%{package_version}/%{name}-rpm-%{package_version}.tar.gz
 Patch0: goversion.patch
 
 BuildRequires: golang-bin
 BuildRequires: systemd-rpm-macros
+%if 0%{?el8}
+BuildRequires: epel-rpm-macros
+%endif
+%if 0%{?el9}
+BuildRequires: rpmautospec-rpm-macros
+%endif
+%if ! 0%{?el8}
+BuildRequires: go-rpm-macros
+%endif
 URL: https://openbao.org
 
 Provides: bundled(golang(cel.dev/expr)) = v0.24.0
@@ -392,8 +407,8 @@ Provides a compatibility layer on top of OpenBao to emulate a Hashicorp
 Vault package.
 
 %prep
-%setup -q -n %{name}-rpm-%{package_version}
-%setup -q -T -b 1 -n %{name}-dist-%{package_version}
+%setup -q -T -b 1 -n %{name}-rpm-%{package_version}
+%setup -q -n %{name}-dist-%{package_version}
 %autopatch
 
 %build
@@ -402,32 +417,46 @@ Vault package.
 # this prevents it from complaining that ui assets are too old
 touch http/web_ui/index.html
 
-GO_BUILD_MODE="-buildmode pie"
-GO_BUILD_GCFLAGS=
-GO_BUILD_LDFLAGS="-X github.com/%{name}/%{name}/version.fullVersion=%{version}-%{release}"
-GO_BUILD_LDFLAGS+=" -X github.com/%{name}/%{name}/version.GitCommit="
+GO_BUILDTAGS="ui"
+GO_LDFLAGS="-X github.com/%{name}/%{name}/version.fullVersion=%{version}-%{release}"
+GO_LDFLAGS+=" -X github.com/%{name}/%{name}/version.GitCommit="
 BUILD_DATE="$(date -d "@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y-%m-%d)"
-GO_BUILD_LDFLAGS+=" -X github.com/%{name}/%{name}/version.BuildDate=${BUILD_DATE}"
-GO_BUILD_LDFLAGS+=" -B gobuildid"
-GO_BUILD_TAGS="ui"
+GO_LDFLAGS+=" -X github.com/%{name}/%{name}/version.BuildDate=${BUILD_DATE}"
 
-# These are from the %%gobuild macro which we can't use because it doesn't
-# allow for extra tags (nor extra gcflags for debug mode).
-GO_BUILD_TAGS+=" rpm_crashtraceback libtrust_openssl"
-GO_BUILD_LDFLAGS+=" -linkmode=external -compressdwarf=false"
-GO_BUILD_LDFLAGS+=" -extldflags '%__global_ldflags'"
+%if 0%{?el8} || "%{?go_debug}" != ""
+# Define the %%gobuild macro on el8 because it is outdated and doesn't work.
+# Also redefine it if %%go_debug is set for now, until %%gobuild is updated
+# to accept setting -gcflags.
 
+GO_LDFLAGS+=" -B gobuildid"
+GO_BUILDTAGS+=" rpm_crashtraceback libtrust_openssl"
+GO_LDFLAGS+=" -linkmode=external -compressdwarf=false"
+GO_LDFLAGS+=" -extldflags '%__global_ldflags'"
+
+GO_BUILD_GCFLAGS=
 %if "%{?go_debug}" != ""
 # add debugging & testing flags
 GO_BUILD_GCFLAGS="all=-N -l"
-GO_BUILD_LDFLAGS+=" -X github.com/%{name}/%{name}/version.VersionMetadata=testonly"
+GO_LDFLAGS+=" -X github.com/%{name}/%{name}/version.VersionMetadata=testonly"
 # openbao documentation says testonly should not be used for production builds
-GO_BUILD_TAGS+=" testonly"
+GO_BUILDTAGS+=" testonly"
 %endif
 
-# instructions from https://openbao.org/docs/contributing/packaging/#ui-release
-# The ui is pre-prepared in the source distribution tarball
-go build ${GO_BUILD_MODE} -gcflags "${GO_BUILD_GCFLAGS}" -ldflags "${GO_BUILD_LDFLAGS}" -buildvcs=false -o bin/bao -tags "${GO_BUILD_TAGS}"
+%define gobuild(o:) go build -compiler gc -buildmode pie -ldflags "${GO_LDFLAGS}" -gcflags "${GO_BUILD_GCFLAGS}" -tags "${GO_BUILDTAGS}" %{?**}
+
+%else
+# Use more modern gobuild macro, which (except for el9) defaults to not use
+# go modules.  Enable go modules because otherwise it fails to find even
+# the openbao/openbao source.
+%global gomodulesmode GO111MODULE=on
+
+%if 0%{?el9}
+# the el9 gobuild macro only accepts LDFLAGS
+LDFLAGS=${GO_LDFLAGS}
+%endif
+%endif
+
+%gobuild -o bin/bao
 
 %install
 # starts out in %%{name}-dist-%%{package_version} directory
@@ -455,10 +484,12 @@ mkdir -p %{buildroot}%{_sysusersdir}
 cp %{name}.conf %{buildroot}%{_sysusersdir}/%{name}.conf
 
 %pre
+%if 0%{?el8}
 getent group %{name} > /dev/null || groupadd -r %{name}
 getent passwd %{name} > /dev/null || \
     useradd -r -d %{_sharedstatedir}/%{name} -g %{name} \
     -s /sbin/nologin -c "%{name} secrets manager" %{name}
+%endif
 
 %post
 setcap cap_ipc_lock=+ep %{_bindir}/bao

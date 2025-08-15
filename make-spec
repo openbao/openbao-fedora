@@ -32,7 +32,7 @@ while IFS='' read -r LINE; do
     if [[ "$LINE" = *"bundled provides" ]]; then
         awk '{if (index($1, "/") != 0 && ($1 != "//")) {print "Provides: bundled(golang("$1")) = "$2}}' $GOMOD | sed -e 's/-/_/g' | sort | uniq
     elif [[ "$LINE" = "License:"* ]]; then
-        DISTURL="$(sed -n "s/^Source1: //p" $PKG.spec.in|sed -e "s/%{name}/$PKG/g" -e "s/%{package_version}/$VERSION/g")"
+        DISTURL="$(sed -n "s/^Source0: //p" $PKG.spec.in|sed -e "s/%{name}/$PKG/g" -e "s/%{package_version}/$VERSION/g")"
         DISTBALL="$(basename $DISTURL)"
         DIST="$(echo $DISTBALL|sed 's/\.tar.*//')"
         if [ ! -f "$DISTBALL" ]; then
