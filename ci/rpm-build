@@ -6,13 +6,10 @@
 dnf -y install git gpg golang wget rpm-build
 . /etc/os-release
 OS_VERSION="${VERSION_ID%.*}"
-if [ "$OS_VERSION" -le 9 ]; then
+if [ "$OS_VERSION" -lt 20 ]; then
+  # el, not fedora
   dnf install -y epel-release
-  if [ "$OS_VERSION" == 8 ]; then
-    dnf install -y epel-rpm-macros
-  else
-    dnf install -y rpmautospec-rpm-macros
-  fi
+  dnf install -y epel-rpm-macros
 fi
 if [ "$OS_VERSION" != 8 ]; then
   dnf install -y go-rpm-macros
