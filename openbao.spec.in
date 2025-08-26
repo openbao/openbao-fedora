@@ -25,17 +25,15 @@ Patch0: goversion.patch
 
 BuildRequires: golang-bin
 BuildRequires: systemd-rpm-macros
-%if 0%{?el8}
-BuildRequires: epel-rpm-macros
-%endif
-%if 0%{?el9}
-BuildRequires: rpmautospec-rpm-macros
-%endif
+%{?sysusers_requires_compat}
 %if ! 0%{?el8}
 BuildRequires: go-rpm-macros
 %endif
+
 URL: https://openbao.org
 
+# The bundled provides are generated from an awk/sed pipeline in the
+# make-spec script (which is included in Source1) that reads from go.mod.
 # This line gets replaced by bundled provides
 
 %description
@@ -73,40 +71,41 @@ GO_LDFLAGS+=" -X github.com/%{name}/%{name}/version.GitCommit="
 BUILD_DATE="$(date -d "@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y-%m-%d)"
 GO_LDFLAGS+=" -X github.com/%{name}/%{name}/version.BuildDate=${BUILD_DATE}"
 
-%if 0%{?el8} || "%{?go_debug}" != ""
+%if 0%{?el8}
 # Define the %%gobuild macro on el8 because it is outdated and doesn't work.
-# Also redefine it if %%go_debug is set for now, until %%gobuild is updated
-# to accept setting -gcflags.
 
 GO_LDFLAGS+=" -B gobuildid"
 GO_BUILDTAGS+=" rpm_crashtraceback libtrust_openssl"
 GO_LDFLAGS+=" -linkmode=external -compressdwarf=false"
 GO_LDFLAGS+=" -extldflags '%__global_ldflags'"
 
-GO_BUILD_GCFLAGS=
+%define gobuild go build -compiler gc -buildmode pie -ldflags "${GO_LDFLAGS}" -tags "${GO_BUILDTAGS}"
+
+%else
+# Use more modern gobuild macro.
+
+# Except for el9, this defaults to not use go modules.  Enable go modules
+# because it is allowed and is a simpler option than making the additional go
+# macros required to manage the non-module form on el8 where they're missing.
+%global gomodulesmode GO111MODULE=on
+
+%if 0%{?el9}
+# the el9 gobuild macro only accepts LDFLAGS, not GO_LDFLAGS
+LDFLAGS=${GO_LDFLAGS}
+%endif
+%endif
+
 %if "%{?go_debug}" != ""
 # add debugging & testing flags
 GO_BUILD_GCFLAGS="all=-N -l"
 GO_LDFLAGS+=" -X github.com/%{name}/%{name}/version.VersionMetadata=testonly"
 # openbao documentation says testonly should not be used for production builds
 GO_BUILDTAGS+=" testonly"
-%endif
-
-%define gobuild(o:) go build -compiler gc -buildmode pie -ldflags "${GO_LDFLAGS}" -gcflags "${GO_BUILD_GCFLAGS}" -tags "${GO_BUILDTAGS}" %{?**}
-
+%gobuild -o bin/bao -gcflags "${GO_BUILD_GCFLAGS}"
 %else
-# Use more modern gobuild macro, which (except for el9) defaults to not use
-# go modules.  Enable go modules because otherwise it fails to find even
-# the openbao/openbao source.
-%global gomodulesmode GO111MODULE=on
-
-%if 0%{?el9}
-# the el9 gobuild macro only accepts LDFLAGS
-LDFLAGS=${GO_LDFLAGS}
-%endif
-%endif
-
 %gobuild -o bin/bao
+%endif
+
 
 %install
 # starts out in %%{name}-dist-%%{package_version} directory
@@ -133,16 +132,15 @@ ln -s %{name}.service %{buildroot}%{_unitdir}/%{oldname}.service
 mkdir -p %{buildroot}%{_sysusersdir}
 cp %{name}.conf %{buildroot}%{_sysusersdir}/%{name}.conf
 
+#
+# NOTE: we can't run the standard go tests because some of them
+# require network access.
+#
+
 %pre
-%if 0%{?el8}
-getent group %{name} > /dev/null || groupadd -r %{name}
-getent passwd %{name} > /dev/null || \
-    useradd -r -d %{_sharedstatedir}/%{name} -g %{name} \
-    -s /sbin/nologin -c "%{name} secrets manager" %{name}
-%endif
+%sysusers_create_compat %{name}.conf
 
 %post
-setcap cap_ipc_lock=+ep %{_bindir}/bao
 %systemd_post %{name}.service
 
 %preun
