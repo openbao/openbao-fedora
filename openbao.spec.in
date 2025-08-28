@@ -2,12 +2,12 @@
 
 # This macro can be slightly different than %%{version}.
 # For example, it should have a dash instead of tilde for release candidates.
-%global package_version 2.3.2
+%global package_version 2.4.0
 
 %global oldname vault
 
 Name: openbao
-Version: 2.3.2
+Version: 2.4.0
 Release: %autorelease
 Summary: A tool for securely accessing secrets
 # See LICENSE for primary license
