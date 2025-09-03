@@ -2,7 +2,7 @@
 
 # This macro can be slightly different than %%{version}.
 # For example, it should have a dash instead of tilde for release candidates.
-%global package_version 2.4.0
+%global package_version 2.4.0-1
 
 %global oldname vault
 
@@ -11,12 +11,14 @@ Version: 2.4.0
 Release: %autorelease
 Summary: A tool for securely accessing secrets
 # See LICENSE for primary license
-# See LICENSE_DEPENDENCIES.md for bundled dependencies
+# See LICENSE_DEPENDENCIES.md for bundled go dependencies
+# See LICENSE_NODE_MODULES.txt for bundled node/npm dependencies
 # CC0-1.0 is normally not permissible for code in Fedora. Because the vendored Go package
 # github.com/zeebo/blake3 it applies to has been available in Fedora as golang-github-zeebo-blake3
 # since before the cutoff date 2022-08-01, the exception to use it also applies here.
 License: MPL-2.0
-Source0: https://github.com/openbao/%{name}/releases/download/v%{package_version}/%{name}-dist-%{package_version}.tar.xz
+# On the next release change DrDaveD to openbao
+Source0: https://github.com/DrDaveD/%{name}/releases/download/v%{package_version}/%{name}-dist-%{package_version}.tar.xz
 # This includes extra files to include in the package and is used as a
 # single branch to track changes to them and a place where checks can be
 # automated using github actions.
@@ -71,41 +73,19 @@ GO_LDFLAGS+=" -X github.com/%{name}/%{name}/version.GitCommit="
 BUILD_DATE="$(date -d "@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y-%m-%d)"
 GO_LDFLAGS+=" -X github.com/%{name}/%{name}/version.BuildDate=${BUILD_DATE}"
 
-%if 0%{?el8}
-# Define the %%gobuild macro on el8 because it is outdated and doesn't work.
-
-GO_LDFLAGS+=" -B gobuildid"
-GO_BUILDTAGS+=" rpm_crashtraceback libtrust_openssl"
-GO_LDFLAGS+=" -linkmode=external -compressdwarf=false"
-GO_LDFLAGS+=" -extldflags '%__global_ldflags'"
-
-%define gobuild go build -compiler gc -buildmode pie -ldflags "${GO_LDFLAGS}" -tags "${GO_BUILDTAGS}"
-
-%else
-# Use more modern gobuild macro.
-
-# Except for el9, this defaults to not use go modules.  Enable go modules
-# because it is allowed and is a simpler option than making the additional go
-# macros required to manage the non-module form on el8 where they're missing.
-%global gomodulesmode GO111MODULE=on
-
-%if 0%{?el9}
-# the el9 gobuild macro only accepts LDFLAGS, not GO_LDFLAGS
-LDFLAGS=${GO_LDFLAGS}
-%endif
-%endif
-
 %if "%{?go_debug}" != ""
 # add debugging & testing flags
-GO_BUILD_GCFLAGS="all=-N -l"
 GO_LDFLAGS+=" -X github.com/%{name}/%{name}/version.VersionMetadata=testonly"
 # openbao documentation says testonly should not be used for production builds
 GO_BUILDTAGS+=" testonly"
-%gobuild -o bin/bao -gcflags "${GO_BUILD_GCFLAGS}"
-%else
-%gobuild -o bin/bao
+%global gobuildflags %{gobuildflags} -gcflags "all=-N -l"
 %endif
 
+# The gobuild macro defaults to not use go modules.  Enable go modules
+# because it is allowed and is the simplest option.
+%global gomodulesmode GO111MODULE=on
+
+%gobuild -o bin/bao
 
 %install
 # starts out in %%{name}-dist-%%{package_version} directory
@@ -160,6 +140,7 @@ cp %{name}.conf %{buildroot}%{_sysusersdir}/%{name}.conf
 %{_datadir}/man/man1/bao.1.gz
 %license LICENSE
 %license LICENSE_DEPENDENCIES.md
+%license LICENSE_NODE_MODULES.txt
 %doc README.md
 %doc CHANGELOG.md
 

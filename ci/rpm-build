@@ -23,7 +23,7 @@ chown -R testuser .
 su testuser -c '
   set -x
   set -e
-  VERSION="`sed -n "s/^Version: //p" src/openbao.spec|sed "s/~/-/"`"
+  VERSION="$(sed -n "s/%global package_version[ \t]*//p" src/openbao.spec)"
   ln -s src openbao-rpm-$VERSION
   tar czhf openbao-rpm-$VERSION.tar.gz --exclude ".git*" openbao-rpm-$VERSION/
   mv openbao-rpm-$VERSION.tar.gz src
