@@ -20,37 +20,37 @@ if [ -w $PKG.spec ]; then
     fi
 fi
 VERSION="$(sed -n 's/%global package_version[ \t]*//p' $PKG.spec.in)"
-GOMOD=/tmp/go.mod.$$
-trap "rm -f $GOMOD" 0
-URL="https://raw.githubusercontent.com/$ORG/$PKG/refs/tags/v$VERSION/go.mod"
-if ! curl -o $GOMOD -sSL -f -m 15 $URL; then
-    echo "Couldn't download $GOMOD" >&2
-    exit 3
+
+DISTURL="$(sed -n "s/^Source0: //p" $PKG.spec.in|sed -e "s/%{name}/$PKG/g" -e "s/%{package_version}/$VERSION/g")"
+DISTBALL="$(basename $DISTURL)"
+DIST="$(echo $DISTBALL|sed 's/\.tar.*//')"
+if [ ! -f "$DISTBALL" ]; then
+    curl -sLO "$DISTURL"
+    if [ ! -f "$DISTBALL" ]; then
+        echo "Couldn't download $DISTURL!" >&2
+        exit 4
+    fi
 fi
+GOMOD=go.mod
+NVERS=VERSION_NODE_MODULES.txt
+LDEP=LICENSE_DEPENDENCIES.md
+NDEP=SPDX_NODE_MODULES.txt
+DISTFILES="$GOMOD $NVERS $LDEP $NDEP"
+trap "rm -f $DISTFILES" 0
+for F in $DISTFILES; do
+    tar --xform "s/^$DIST/./" -xf $DISTBALL $DIST/$F
+    if [ ! -f $F ]; then
+        echo "$F not found in $DISTBALL!" >&2
+        exit 4
+    fi
+done
 rm -f $PKG.spec
+
 while IFS='' read -r LINE; do
     if [[ "$LINE" = *"bundled provides" ]]; then
         awk '{if (index($1, "/") != 0 && ($1 != "//")) {print "Provides: bundled(golang("$1")) = "$2}}' $GOMOD | sed -e 's/-/_/g' | sort | uniq
+        awk '{print "Provides: bundled(nodejs-"$1") = "$2}' $NVERS
     elif [[ "$LINE" = "License:"* ]]; then
-        DISTURL="$(sed -n "s/^Source0: //p" $PKG.spec.in|sed -e "s/%{name}/$PKG/g" -e "s/%{package_version}/$VERSION/g")"
-        DISTBALL="$(basename $DISTURL)"
-        DIST="$(echo $DISTBALL|sed 's/\.tar.*//')"
-        if [ ! -f "$DISTBALL" ]; then
-            curl -sLO "$DISTURL"
-            if [ ! -f "$DISTBALL" ]; then
-                echo "Couldn't download $DISTURL!" >&2
-                exit 4
-            fi
-        fi
-        LDEP=LICENSE_DEPENDENCIES.md
-        NDEP=SPDX_NODE_MODULES.txt
-        for F in $LDEP $NDEP; do
-            tar --xform "s/^$DIST/./" -xf $DISTBALL $DIST/$F
-            if [ ! -f $F ]; then
-                echo "$F not found in $DISTBALL!" >&2
-                exit 4
-            fi
-        done
         MAINLICENSE="$(echo $LINE|sed 's/^License: //')"
         # These get detected by go_vendor_license but not by the tool
         # used upstream, github.com/google/go-licenses.
