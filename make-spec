@@ -37,8 +37,12 @@ LDEP=LICENSE_DEPENDENCIES.md
 NDEP=SPDX_NODE_MODULES.txt
 DISTFILES="$GOMOD $NVERS $LDEP $NDEP"
 trap "rm -f $DISTFILES" 0
+TARPATHS=""
 for F in $DISTFILES; do
-    tar --xform "s/^$DIST/./" -xf $DISTBALL $DIST/$F
+    TARPATHS="$TARPATHS $DIST/$F"
+done
+tar --xform "s/^$DIST/./" -xf $DISTBALL $TARPATHS
+for F in $DISTFILES; do
     if [ ! -f $F ]; then
         echo "$F not found in $DISTBALL!" >&2
         exit 4
