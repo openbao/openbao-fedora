@@ -1,11 +1,11 @@
 #!/bin/bash
 
-ORG=openbao
 PKG=openbao
 if [ ! -f $PKG.spec.in ]; then
     echo "$PKG.spec.in doesn't exist!" >&2
     exit 1
 fi
+ORG="$(grep ^Source0: $PKG.spec.in|cut -d/ -f4)"
 # Check if someone accidentally modified $PKG.spec. This is tricky
 # because git does not keep track of whether not a file is readonly.
 # This script generates it read-only, so if it isn't writable then it
@@ -19,7 +19,7 @@ if [ -w $PKG.spec ]; then
         exit 2
     fi
 fi
-VERSION="$(sed -n 's/^Version:[ \t]*//p' $PKG.spec.in|sed 's/~/-/')"
+VERSION="$(sed -n 's/%global package_version[ \t]*//p' $PKG.spec.in)"
 GOMOD=/tmp/go.mod.$$
 trap "rm -f $GOMOD" 0
 URL="https://raw.githubusercontent.com/$ORG/$PKG/refs/tags/v$VERSION/go.mod"
@@ -43,13 +43,21 @@ while IFS='' read -r LINE; do
             fi
         fi
         LDEP=LICENSE_DEPENDENCIES.md
-        tar --xform "s/^$DIST/./" -xf $DISTBALL $DIST/$LDEP
-        if [ ! -f $LDEP ]; then
-            echo "$LDEP not found in $DISTBALL!" >&2
-            exit 4
-        fi
+        NDEP=SPDX_NODE_MODULES.txt
+        for F in $LDEP $NDEP; do
+            tar --xform "s/^$DIST/./" -xf $DISTBALL $DIST/$F
+            if [ ! -f $F ]; then
+                echo "$F not found in $DISTBALL!" >&2
+                exit 4
+            fi
+        done
         MAINLICENSE="$(echo $LINE|sed 's/^License: //')"
-        LICENSES="$(echo $(sed -n "s/^\*\*.*License:\*\* //p" $LDEP|sort -u|grep -v "^$MAINLICENSE$"|grep -v Unknown)|sed 's/ / AND /g')"
+        # These get detected by go_vendor_license but not by the tool
+        # used upstream, github.com/google/go-licenses.
+        # The first is from github.com/apparentlymart/go-textseg/v13/LICENSE
+        # and the second from github.com/Nvveen/Gotty/LICENSE
+        EXTRALICENSES="Unicode-DFS-2016 BSD-2-Clause-Views"
+        LICENSES="$((sed -n "s/^\*\*.*License:\*\* //p" $LDEP;echo $EXTRALICENSES|tr ' ' '\n';cat $NDEP)|sort -u|grep -v "^$MAINLICENSE$"|grep -v Unknown|tr '\n' ':'|sed 's/:$//;s/:/ AND /g')"
         if [ -z "$LICENSES" ]; then
             echo "Didn't find any licenses in $LDEP!" >&2
             exit 4
