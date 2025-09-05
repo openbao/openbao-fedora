@@ -61,7 +61,7 @@ while IFS='' read -r LINE; do
         # The first is from github.com/apparentlymart/go-textseg/v13/LICENSE
         # and the second from github.com/Nvveen/Gotty/LICENSE
         EXTRALICENSES="Unicode-DFS-2016 BSD-2-Clause-Views"
-        LICENSES="$((sed -n "s/^\*\*.*License:\*\* //p" $LDEP;echo $EXTRALICENSES|tr ' ' '\n';cat $NDEP)|sort -u|grep -v "^$MAINLICENSE$"|grep -v Unknown|tr '\n' ':'|sed 's/:$//;s/:/ AND /g')"
+        LICENSES="$((sed -n "s/^\*\*.*License:\*\* //p" $LDEP|grep -v Unknown;echo $EXTRALICENSES|tr ' ' '\n';sed 's/^BSD$/BSD-3-Clause/;/^Public Domain/d;s/^(\([^ ]*\) AND \([^)]*\))/\1\n\2/' $NDEP)|sort -u|grep -v "^$MAINLICENSE$"|tr '\n' ':'|sed 's/:$//;s/:/ AND /g')"
         if [ -z "$LICENSES" ]; then
             echo "Didn't find any licenses in $LDEP!" >&2
             exit 4

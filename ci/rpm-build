@@ -24,9 +24,9 @@ su testuser -c '
   set -x
   set -e
   VERSION="$(sed -n "s/%global package_version[ \t]*//p" src/openbao.spec)"
-  ln -s src openbao-rpm-$VERSION
-  tar czhf openbao-rpm-$VERSION.tar.gz --exclude ".git*" openbao-rpm-$VERSION/
-  mv openbao-rpm-$VERSION.tar.gz src
+  ln -s src openbao-fedora-$VERSION
+  tar czhf openbao-fedora-$VERSION.tar.gz --exclude ".git*" openbao-fedora-$VERSION/
+  mv openbao-fedora-$VERSION.tar.gz src
   cd src
   DISTURL="`sed -n "s/^Source0: //p" openbao.spec|sed -e "s/%{name}/openbao/g" -e "s/%{package_version}/$VERSION/g"`"
   wget "$DISTURL"
