@@ -16,13 +16,13 @@ Summary: A tool for securely accessing secrets
 # CC0-1.0 is normally not permissible for code in Fedora. Because the vendored Go package
 # github.com/zeebo/blake3 it applies to has been available in Fedora as golang-github-zeebo-blake3
 # since before the cutoff date 2022-08-01, the exception to use it also applies here.
-License: MPL-2.0 AND (BSD-3-Clause OR MIT) AND (MIT AND BSD-3-Clause) AND (MIT AND Zlib) AND (MIT OR Apache-2.0) AND (MIT OR CC0-1.0) AND (MPL-2.0 OR Apache-2.0) AND 0BSD AND AFL-2.0 AND Apache-2.0 AND BSD AND BSD-2-Clause AND BSD-2-Clause-Views AND BSD-3-Clause AND BlueOak-1.0.0 AND CC-BY-3.0 AND CC-BY-4.0 AND CC0-1.0 AND ISC AND MIT AND Public Domain AND Unicode-DFS-2016 AND Unlicense
+License: MPL-2.0 AND (BSD-3-Clause OR MIT) AND (MIT OR Apache-2.0) AND (MIT OR CC0-1.0) AND (MPL-2.0 OR Apache-2.0) AND 0BSD AND AFL-2.0 AND Apache-2.0 AND BSD-2-Clause AND BSD-2-Clause-Views AND BSD-3-Clause AND BlueOak-1.0.0 AND CC-BY-3.0 AND CC-BY-4.0 AND CC0-1.0 AND ISC AND MIT AND Unicode-DFS-2016 AND Unlicense AND Zlib
 # On the next release change DrDaveD to openbao
 Source0: https://github.com/DrDaveD/%{name}/releases/download/v%{package_version}/%{name}-dist-%{package_version}.tar.xz
 # This includes extra files to include in the package and is used as a
-# single branch to track changes to them and a place where checks can be
-# automated using github actions.
-Source1: https://github.com/opensciencegrid/%{name}-rpm/releases/download/v%{package_version}/%{name}-rpm-%{package_version}.tar.gz
+# single git branch to track changes to them (unlike src.fedoraproject.org)
+# and a place where checks can be automated using github actions.
+Source1: https://github.com/openbao/%{name}-fedora/releases/download/v%{package_version}/%{name}-fedora-%{package_version}.tar.gz
 Patch0: goversion.patch
 
 BuildRequires: golang-bin
@@ -1818,7 +1818,7 @@ Provides a compatibility layer on top of OpenBao to emulate a Hashicorp
 Vault package.
 
 %prep
-%setup -q -T -b 1 -n %{name}-rpm-%{package_version}
+%setup -q -T -b 1 -n %{name}-fedora-%{package_version}
 %setup -q -n %{name}-dist-%{package_version}
 %autopatch
 
@@ -1854,7 +1854,7 @@ mkdir -p %{buildroot}%{_bindir}/
 cp -p bin/bao %{buildroot}%{_bindir}/
 ln -s bao %{buildroot}%{_bindir}/%{oldname}
 
-cd ../%{name}-rpm-%{package_version}
+cd ../%{name}-fedora-%{package_version}
 mkdir -p %{buildroot}%{_sysconfdir}/%{name}.d/tls
 cp -p %{name}.hcl %{buildroot}%{_sysconfdir}/%{name}.d
 ln -s %{name}.d %{buildroot}%{_sysconfdir}/%{oldname}.d
