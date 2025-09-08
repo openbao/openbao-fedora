@@ -9,6 +9,8 @@ jobs:
     name: release_assets
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -41,6 +43,11 @@ jobs:
         if: env.do_release
         uses: softprops/action-gh-release@v1
         with:
+          # Apparently this is supposed to default to false, but some have
+          # reported that it does not work.
+          # https://github.com/softprops/action-gh-release/issues/379
+          # https://github.com/leuat/TRSE/issues/890
+          draft: false
           files: |
             openbao*.tar.gz
             *.src.rpm
