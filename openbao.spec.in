@@ -2,12 +2,12 @@
 
 # This macro can be slightly different than %%{version}.
 # For example, it should have a dash instead of tilde for release candidates.
-%global package_version 2.4.0-1
+%global package_version 2.4.1
 
 %global oldname vault
 
 Name: openbao
-Version: 2.4.0
+Version: 2.4.1
 Release: %autorelease
 Summary: A tool for securely accessing secrets
 # See LICENSE for primary license
@@ -17,8 +17,7 @@ Summary: A tool for securely accessing secrets
 # github.com/zeebo/blake3 it applies to has been available in Fedora as golang-github-zeebo-blake3
 # since before the cutoff date 2022-08-01, the exception to use it also applies here.
 License: MPL-2.0
-# On the next release change DrDaveD to openbao
-Source0: https://github.com/DrDaveD/%{name}/releases/download/v%{package_version}/%{name}-dist-%{package_version}.tar.xz
+Source0: https://github.com/openbao/%{name}/releases/download/v%{package_version}/%{name}-dist-%{package_version}.tar.xz
 # This includes extra files to include in the package and is used as a
 # single git branch to track changes to them (unlike src.fedoraproject.org)
 # and a place where checks can be automated using github actions.
