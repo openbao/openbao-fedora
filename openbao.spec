@@ -27,9 +27,7 @@ Patch0: goversion.patch
 BuildRequires: golang-bin
 BuildRequires: systemd-rpm-macros
 %{?sysusers_requires_compat}
-%if ! 0%{?el8}
 BuildRequires: go-rpm-macros
-%endif
 
 URL: https://openbao.org
 
@@ -1859,8 +1857,8 @@ cp -p %{name}.hcl %{buildroot}%{_sysconfdir}/%{name}.d
 ln -s %{name}.d %{buildroot}%{_sysconfdir}/%{oldname}.d
 
 mkdir -p %{buildroot}%{_datadir}/man/man1
-gzip -c bao.1 >%{buildroot}%{_datadir}/man/man1/bao.1.gz
-ln -s bao.1 %{buildroot}%{_datadir}/man/man1/%{oldname}.1.gz
+cp -p bao.1 %{buildroot}%{_datadir}/man/man1
+ln -s bao.1 %{buildroot}%{_datadir}/man/man1/%{oldname}.1
 
 mkdir -p %{buildroot}%{_sharedstatedir}/%{name}
 ln -s %{name} %{buildroot}%{_sharedstatedir}/%{oldname}
@@ -1897,7 +1895,7 @@ cp %{name}.conf %{buildroot}%{_sysusersdir}/%{name}.conf
 %attr(0700,%{name},%{name}) %dir %{_sharedstatedir}/%{name}
 %{_unitdir}/%{name}.service
 %{_sysusersdir}/%{name}.conf
-%{_datadir}/man/man1/bao.1.gz
+%{_datadir}/man/man1/bao.1*
 %license LICENSE
 %license LICENSE_DEPENDENCIES.md
 %license LICENSE_NODE_MODULES.txt
@@ -1908,7 +1906,7 @@ cp %{name}.conf %{buildroot}%{_sysusersdir}/%{name}.conf
 %{_bindir}/%{oldname}
 %{_sysconfdir}/%{oldname}.d
 %{_sharedstatedir}/%{oldname}
-%{_datadir}/man/man1/%{oldname}.1.gz
+%{_datadir}/man/man1/%{oldname}.1*
 %{_unitdir}/%{oldname}.service
 
 %changelog
