@@ -11,9 +11,7 @@ if [ "$OS_VERSION" -lt 20 ]; then
   dnf install -y epel-release
   dnf install -y epel-rpm-macros
 fi
-if [ "$OS_VERSION" != 8 ]; then
-  dnf install -y go-rpm-macros
-fi
+dnf install -y go-rpm-macros
 
 # switch to an unprivileged user
 useradd -u 1000 --create-home -s /bin/bash testuser
