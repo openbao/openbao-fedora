@@ -1888,9 +1888,9 @@ cp %{name}.conf %{buildroot}%{_sysusersdir}/%{name}.conf
 %systemd_postun_with_restart %{name}.service
 
 %files
-%verify(not caps) %{_bindir}/bao
+%{_bindir}/bao
 %dir %{_sysconfdir}/%{name}.d
-%attr(0700,%{name},%{name}) %dir %{_sysconfdir}/%{name}.d/tls
+%attr(0750,root,%{name}) %dir %{_sysconfdir}/%{name}.d/tls
 %config(noreplace) %{_sysconfdir}/%{name}.d/%{name}.hcl
 %attr(0700,%{name},%{name}) %dir %{_sharedstatedir}/%{name}
 %{_unitdir}/%{name}.service
