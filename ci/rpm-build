@@ -28,11 +28,6 @@ su testuser -c '
   cd src
   DISTURL="`sed -n "s/^Source0: //p" openbao.spec|sed -e "s/%{name}/openbao/g" -e "s/%{package_version}/$VERSION/g"`"
   wget "$DISTURL"
-  GOVERSION="`sed -n "s/%global go_version //p" openbao.spec`"
-  GOURL="`sed -n "s/^Source2: //p" openbao.spec|sed "s/%{go_version}/$GOVERSION/"`"
-  if [ -n "$GOURL" ]; then
-    wget "$GOURL"
-  fi
   # eliminate the "dist" part in the rpm name, for the release assets
   rpmbuild -D "dist %{nil}" -D "_topdir $PWD" -D "_sourcedir $PWD" -D "_srcrpmdir $PWD" -D "_rpmdir $PWD" -ba openbao.spec
   mv $(arch)/* .
