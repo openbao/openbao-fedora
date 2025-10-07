@@ -24,7 +24,6 @@ Source0: https://github.com/openbao/%{name}/releases/download/v%{package_version
 Source1: https://github.com/openbao/%{name}-fedora/releases/download/v%{package_version}/%{name}-fedora-%{package_version}.tar.gz
 # This has to be separate because it is used in a %%pre step
 Source2: https://github.com/openbao/%{name}-fedora/blob/v{package_version}/%{name}.conf
-Patch0: goversion.patch
 
 BuildRequires: golang-bin
 BuildRequires: systemd-rpm-macros
