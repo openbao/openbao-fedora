@@ -2,12 +2,12 @@
 
 # This macro can be slightly different than %%{version}.
 # For example, it should have a dash instead of tilde for release candidates.
-%global package_version 2.4.4
+%global package_version 2.5.0
 
 %global oldname vault
 
 Name: openbao
-Version: 2.4.4
+Version: 2.5.0
 Release: %autorelease
 Summary: A tool for securely accessing secrets
 # See LICENSE for primary license
@@ -60,7 +60,7 @@ Vault package.
 %prep
 %setup -q -T -b 1 -n %{name}-fedora-%{package_version}
 %setup -q -n %{name}-dist-%{package_version}
-%autopatch
+#%%autopatch
 
 %build
 # starts out in %%{name}-dist-%%{package_version} directory
