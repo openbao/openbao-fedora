@@ -61,7 +61,14 @@ while IFS='' read -r LINE; do
         # The first is from github.com/apparentlymart/go-textseg/v13/LICENSE
         # and the second from github.com/Nvveen/Gotty/LICENSE
         EXTRALICENSES="Unicode-DFS-2016 BSD-2-Clause-Views"
-        LICENSES="$((sed -n "s/^\*\*.*License:\*\* //p" $LDEP|grep -v Unknown;echo $EXTRALICENSES|tr ' ' '\n';sed 's/^BSD$/BSD-3-Clause/;/^Public Domain/d;s/^(\([^ ]*\) AND \([^)]*\))/\1\n\2/' $NDEP)|sort -u|grep -v "^$MAINLICENSE$"|tr '\n' ':'|sed 's/:$//;s/:/ AND /g')"
+	# Something went very crazy with the hashicorp/vic dependency in
+	# openbao-2.6.0. It has an "open_source_licenses.txt" file that lists
+	# a huge number of licenses, many with non-SPDX compatible names.
+	# They apply to the whole vic repository, not just the tiny piece
+	# used indirectly by OpenBao (hashicorp/vic/pkg/vsphere/tags) which
+	# only contains 4 files marked as Apache-2.0, so filter out the rest
+	# with awk.
+        LICENSES="$((awk '/\/vic\/pkg\/vsphere\// {skip=3} {if (skip > 0) {skip--} else print}' $LDEP | sed -n "s/^\*\*.*License:\*\* //p"|grep -v Unknown;echo $EXTRALICENSES|tr ' ' '\n';sed 's/^BSD$/BSD-3-Clause/;/^Public Domain/d;s/^(\([^ ]*\) AND \([^)]*\))/\1\n\2/' $NDEP)|sort -u|grep -v "^$MAINLICENSE$"|tr '\n' ':'|sed 's/:$//;s/:/ AND /g')"
         if [ -z "$LICENSES" ]; then
             echo "Didn't find any licenses in $LDEP!" >&2
             exit 4
