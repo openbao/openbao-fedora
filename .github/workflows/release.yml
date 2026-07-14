@@ -21,6 +21,8 @@ jobs:
         env:
           GITHUB_REF: ${{github.ref}}
         run: |
+          # treat beta releases as older than production
+          git config --global --add versionsort.suffix -beta
           LATESTTAG="$(git tag --sort=v:refname|tail -1)"
           GITTAG="${GITHUB_REF#refs/tags/v*}"
           if [ "$LATESTTAG" == v"$GITTAG" ]
