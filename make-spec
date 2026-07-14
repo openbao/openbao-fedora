@@ -52,8 +52,8 @@ rm -f $PKG.spec
 
 while IFS='' read -r LINE; do
     if [[ "$LINE" = *"bundled provides" ]]; then
-        awk '{if (index($1, "/") != 0 && ($1 != "//")) {print "Provides: bundled(golang("$1")) = "$2}}' $GOMOD | sed -e 's/-/_/g' | sort | uniq
-        awk '{print "Provides: bundled(nodejs-"$1") = "$2}' $NVERS
+        awk '{if (index($1, "/") != 0 && ($1 != "//")) {print "Provides: bundled(golang("$1")) = "gensub("-","~","g",$2)}}' $GOMOD | sort | uniq
+        awk '{print "Provides: bundled(nodejs-"$1") = "gensub("-","~","g",$2)}' $NVERS
     elif [[ "$LINE" = "License:"* ]]; then
         MAINLICENSE="$(echo $LINE|sed 's/^License: //')"
         # These get detected by go_vendor_license but not by the tool
