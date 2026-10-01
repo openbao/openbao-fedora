@@ -2,12 +2,12 @@
 
 # This macro can be slightly different than %%{version}.
 # For example, it should have a dash instead of tilde for release candidates.
-%global package_version 2.6.3
+%global package_version 2.6.4
 
 %global oldname vault
 
 Name: openbao
-Version: 2.6.3
+Version: 2.6.4
 Release: %autorelease
 Summary: A tool for securely accessing secrets
 # See LICENSE for primary license
@@ -163,7 +163,7 @@ Provides: bundled(golang(github.com/googleapis/gax-go/v2)) = v2.22.0
 Provides: bundled(golang(github.com/gophercloud/gophercloud)) = v0.1.0
 Provides: bundled(golang(github.com/gorilla/websocket)) = v1.5.4~0.20250319132907~e064f32e3674
 Provides: bundled(golang(github.com/hailocab/go-hostpool)) = v0.0.0~20160125115350~e80d13ce29ed
-Provides: bundled(golang(github.com/hashicorp/cap)) = v0.13.0
+Provides: bundled(golang(github.com/hashicorp/cap)) = v0.14.0
 Provides: bundled(golang(github.com/hashicorp/cli)) = v1.1.7
 Provides: bundled(golang(github.com/hashicorp/errwrap)) = v1.1.0
 Provides: bundled(golang(github.com/hashicorp/go-cleanhttp)) = v0.5.2
