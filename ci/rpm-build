@@ -33,5 +33,5 @@ su testuser -c '
   mv $(arch)/* .
 '
 
-rpm -i src/openbao-*.$(arch).rpm
+dnf install -y src/openbao-*.$(arch).rpm
 bao version
